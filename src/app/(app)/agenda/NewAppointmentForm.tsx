@@ -5,7 +5,15 @@ import { createAppointment } from "./actions";
 import { Field, inputCls } from "@/components/ui";
 import { todayCL } from "@/lib/types";
 
-export function NewAppointmentForm({ patients }: { patients: { id: string; full_name: string }[] }) {
+export function NewAppointmentForm({
+  patients,
+  defaultDate,
+  defaultTime,
+}: {
+  patients: { id: string; full_name: string }[];
+  defaultDate?: string;
+  defaultTime?: string;
+}) {
   const [state, formAction, pending] = useActionState(createAppointment, { error: "" });
 
   return (
@@ -16,6 +24,7 @@ export function NewAppointmentForm({ patients }: { patients: { id: string; full_
           required
           list="agenda-patients"
           autoComplete="off"
+          autoFocus={Boolean(defaultTime)}
           className={inputCls}
           placeholder="Escribe el nombre…"
         />
@@ -30,10 +39,10 @@ export function NewAppointmentForm({ patients }: { patients: { id: string; full_
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Fecha">
-          <input name="appointment_date" type="date" required className={inputCls} defaultValue={todayCL()} />
+          <input name="appointment_date" type="date" required className={inputCls} defaultValue={defaultDate ?? todayCL()} />
         </Field>
         <Field label="Hora">
-          <input name="appointment_time" type="time" required className={inputCls} />
+          <input name="appointment_time" type="time" required className={inputCls} defaultValue={defaultTime} />
         </Field>
       </div>
       <Field label="Profesional">

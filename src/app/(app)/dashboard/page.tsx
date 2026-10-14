@@ -1,10 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, StatCard, Badge, PrimaryButton } from "@/components/ui";
-import { canSeeFinance, formatCLP, formatDate, formatDateTime, todayCL, whatsappLink, APPOINTMENT_STATUS_LABELS, ORDER_STATUS_LABELS, PURCHASE_TYPE_LABELS } from "@/lib/types";
-import { Users, CalendarClock, CalendarPlus, DollarSign, PackageCheck, UserPlus, ShoppingCart, ScanLine, Send, Phone, MessageCircle } from "lucide-react";
+import { canSeeFinance, formatCLP, formatDate, todayCL, PURCHASE_TYPE_LABELS } from "@/lib/types";
+import { Users, CalendarClock, CalendarPlus, DollarSign, PackageCheck, UserPlus, ShoppingCart, Send } from "lucide-react";
 import Link from "next/link";
+import { AgendaCalendar, type CalendarAppointment, type BusinessHours } from "./AgendaCalendar";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ mes?: string }> }) {
+  const { mes } = await searchParams;
+  const today = todayCL();
+  const month = mes && /^\d{4}-\d{2}$/.test(mes) ? mes : today.slice(0, 7);
+  const [my, mm] = month.split("-").map(Number);
+  const monthStart = `${month}-01`;
+  const monthEnd = `${month}-${String(new Date(Date.UTC(my, mm, 0)).getUTCDate()).padStart(2, "0")}`;
+  const nowParts = new Intl.DateTimeFormat("en-GB", { timeZone: "America/Santiago", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date());
+  const nowMinutes = Number(nowParts.slice(0, 2)) * 60 + Number(nowParts.slice(3, 5));
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -14,14 +24,14 @@ export default async function DashboardPage() {
     : { data: null };
   const showFinance = canSeeFinance(profile?.role);
 
-  const [{ data: summary }, { data: appointmentsToday }, { data: readyOrders }, { data: recentSales }, { data: toContact }] =
+  const [{ data: summary }, { data: monthAppointments }, { data: readyOrders }, { data: recentSales }, { data: toContact }, { data: hoursSetting }] =
     await Promise.all([
       supabase.from("dashboard_summary").select("*").maybeSingle(),
       supabase
         .from("appointments")
         .select("id, appointment_date, appointment_time, reason, status, professional, patients(full_name, phone)")
-        .gte("appointment_date", todayCL())
-        .lte("appointment_date", todayCL(6))
+        .gte("appointment_date", monthStart)
+        .lte("appointment_date", monthEnd)
         .order("appointment_date", { ascending: true })
         .order("appointment_time", { ascending: true }),
       supabase.from("ready_orders").select("*").order("days_waiting", { ascending: false }).limit(5),
@@ -37,21 +47,20 @@ export default async function DashboardPage() {
         .eq("status", "activo")
         .order("months_since_last_purchase", { ascending: false })
         .limit(5),
+      supabase.from("settings").select("value").eq("key", "business_hours").maybeSingle(),
     ]);
 
-  const today = todayCL();
-  const tomorrow = todayCL(1);
-  const dayLabel = (date: string) => {
-    if (date === today) return "Hoy";
-    if (date === tomorrow) return "Mañana";
-    return new Intl.DateTimeFormat("es-CL", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" }).format(new Date(date + "T12:00:00Z"));
-  };
-  const agendaGroups: { date: string; label: string; items: any[] }[] = [];
-  for (const a of appointmentsToday || []) {
-    const last = agendaGroups[agendaGroups.length - 1];
-    if (last && last.date === a.appointment_date) last.items.push(a);
-    else agendaGroups.push({ date: a.appointment_date, label: dayLabel(a.appointment_date), items: [a] });
-  }
+  const calendarAppointments: CalendarAppointment[] = (monthAppointments || []).map((a: any) => ({
+    id: a.id,
+    appointment_date: a.appointment_date,
+    appointment_time: a.appointment_time,
+    reason: a.reason,
+    professional: a.professional,
+    status: a.status,
+    patient_name: a.patients?.full_name ?? null,
+    phone: a.patients?.phone ?? null,
+  }));
+  const businessHours: BusinessHours = (hoursSetting?.value as BusinessHours) ?? { lunes_viernes: "09:00-19:00", sabado: "09:00-14:00" };
 
   return (
     <div>
@@ -72,54 +81,15 @@ export default async function DashboardPage() {
           <h2 className="font-display font-semibold text-lg text-[var(--oc-blue-950)]">Agenda</h2>
           <Link href="/agenda" className="text-xs font-medium text-[var(--oc-blue-700)]">Ver agenda completa</Link>
         </div>
-        {agendaGroups.length === 0 ? (
-          <p className="text-sm text-[var(--oc-slate-500)]">No hay horas agendadas para hoy ni para los próximos 7 días.</p>
-        ) : (
-          <div className="space-y-5">
-            {agendaGroups.map((group) => (
-              <div key={group.date}>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--oc-slate-500)] mb-2">
-                  {group.label} <span className="font-normal normal-case">· {group.items.length} {group.items.length === 1 ? "hora" : "horas"}</span>
-                </p>
-                <ul className="divide-y divide-[var(--oc-slate-100)] rounded-xl border border-[var(--oc-slate-200)]">
-                  {group.items.map((a: any) => {
-                    const phone: string | null = a.patients?.phone ?? null;
-                    const wa = whatsappLink(phone);
-                    const cancelled = a.status === "cancelada" || a.status === "no_asistio";
-                    return (
-                      <li key={a.id} className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 ${cancelled ? "opacity-50" : ""}`}>
-                        <p className="font-display font-bold text-[var(--oc-blue-800)] w-12 shrink-0 tabular-nums">{a.appointment_time?.slice(0, 5)}</p>
-                        <div className="flex-1 min-w-[10rem]">
-                          <p className="text-sm font-medium text-[var(--oc-blue-950)]">{a.patients?.full_name}</p>
-                          <p className="text-xs text-[var(--oc-slate-500)]">{a.reason || "Sin motivo"}{a.professional ? ` · ${a.professional}` : ""}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          {phone ? (
-                            <>
-                              <a href={`tel:${phone.replace(/\s/g, "")}`} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--oc-slate-200)] px-3 py-1.5 text-sm font-medium text-[var(--oc-blue-900)] hover:bg-[var(--oc-slate-100)] tabular-nums">
-                                <Phone className="h-3.5 w-3.5" /> {phone}
-                              </a>
-                              {wa && (
-                                <a href={wa} target="_blank" rel="noopener noreferrer" title="Escribir por WhatsApp" className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-[var(--oc-green-bg)] text-[var(--oc-green)] hover:opacity-80">
-                                  <MessageCircle className="h-4 w-4" />
-                                </a>
-                              )}
-                            </>
-                          ) : (
-                            <span className="text-xs text-[var(--oc-slate-500)]">Sin teléfono</span>
-                          )}
-                          <Badge tone={a.status === "confirmada" || a.status === "atendida" ? "green" : cancelled ? "red" : "blue"}>
-                            {APPOINTMENT_STATUS_LABELS[a.status as keyof typeof APPOINTMENT_STATUS_LABELS] ?? a.status}
-                          </Badge>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            ))}
-          </div>
-        )}
+        <AgendaCalendar
+          key={month}
+          month={month}
+          today={today}
+          nowMinutes={nowMinutes}
+          initialDay={month === today.slice(0, 7) ? today : monthStart}
+          appointments={calendarAppointments}
+          businessHours={businessHours}
+        />
       </Card>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

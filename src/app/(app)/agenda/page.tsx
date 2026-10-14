@@ -12,8 +12,9 @@ function shiftDate(dateStr: string, days: number) {
   return d.toISOString().slice(0, 10);
 }
 
-export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
-  const { date } = await searchParams;
+export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ date?: string; time?: string }> }) {
+  const { date, time } = await searchParams;
+  const presetTime = time && /^\d{2}:\d{2}$/.test(time) ? time : undefined;
   const selectedDate = date || todayCL();
   const supabase = await createClient();
 
@@ -73,7 +74,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
         <div>
           <Card className="p-5">
             <h2 className="font-display font-semibold text-[var(--oc-blue-950)] mb-4">Nueva hora</h2>
-            <NewAppointmentForm patients={patients || []} />
+            <NewAppointmentForm key={`${selectedDate}-${presetTime ?? ""}`} patients={patients || []} defaultDate={selectedDate} defaultTime={presetTime} />
           </Card>
         </div>
       </div>
