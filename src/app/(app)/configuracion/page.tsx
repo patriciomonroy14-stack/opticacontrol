@@ -25,7 +25,12 @@ export default async function ConfiguracionPage() {
 
         <Card className="p-6">
           <h2 className="font-display font-semibold text-[var(--oc-blue-950)] mb-4">Horarios de atención</h2>
-          <BusinessHoursForm weekdays={hours?.value?.lunes_viernes || ""} saturday={hours?.value?.sabado || ""} />
+          <BusinessHoursForm
+            weekdays={hours?.value?.lunes_viernes || ""}
+            saturday={hours?.value?.sabado || ""}
+            sunday={hours?.value?.domingo || ""}
+            slotMinutes={Number(hours?.value?.slot_minutes) || 15}
+          />
         </Card>
       </div>
 

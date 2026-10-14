@@ -19,9 +19,8 @@ export type CalendarAppointment = {
   phone: string | null;
 };
 
-export type BusinessHours = Record<string, string | null | undefined>;
+export type BusinessHours = Record<string, string | number | null | undefined>;
 
-const SLOT_MINUTES = 30;
 const WEEKDAYS = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
 const INACTIVE = new Set(["cancelada", "no_asistio"]);
 
@@ -39,7 +38,7 @@ function hoursFor(date: string, hours: BusinessHours): [number, number] | null {
   const dow = new Date(date + "T12:00:00Z").getUTCDay(); // 0 = domingo
   const key = dow === 0 ? "domingo" : dow === 6 ? "sabado" : "lunes_viernes";
   const range = hours[key];
-  if (!range || !range.includes("-")) return null;
+  if (typeof range !== "string" || !range.includes("-")) return null;
   const [start, end] = range.split("-").map((s) => s.trim());
   return [toMinutes(start), toMinutes(end)];
 }
@@ -197,6 +196,7 @@ export function AgendaCalendar({
           nowMinutes={nowMinutes}
           appointments={byDay.get(openDay) ?? []}
           range={hoursFor(openDay, businessHours)}
+          slotMinutes={Number(businessHours.slot_minutes) || 15}
           patients={patients}
           onClose={() => setOpenDay(null)}
         />
@@ -215,7 +215,9 @@ function DayPanel({
   range,
   patients,
   onClose,
+  slotMinutes,
 }: {
+  slotMinutes: number;
   date: string;
   today: string;
   nowMinutes: number;
@@ -235,13 +237,13 @@ function DayPanel({
   // Todos los bloques del horario + cualquier hora agendada fuera de esos bloques
   const rows: Row[] = useMemo(() => {
     const map = new Map<string, CalendarAppointment[]>();
-    if (range) for (let t = range[0]; t + SLOT_MINUTES <= range[1]; t += SLOT_MINUTES) map.set(toHHMM(t), []);
+    if (range) for (let t = range[0]; t + slotMinutes <= range[1]; t += slotMinutes) map.set(toHHMM(t), []);
     for (const a of appointments) {
       const t = a.appointment_time.slice(0, 5);
       map.set(t, [...(map.get(t) ?? []), a]);
     }
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([time, list]) => ({ time, appointments: list }));
-  }, [appointments, range]);
+  }, [appointments, range, slotMinutes]);
 
   const isPast = date < today;
   const isBookable = (time: string) => !isPast && !(date === today && toMinutes(time) <= nowMinutes);

@@ -28,10 +28,13 @@ export async function updateBusinessHours(_prevState: SettingsState, formData: F
   const value = {
     lunes_viernes: String(formData.get("lunes_viernes") || ""),
     sabado: String(formData.get("sabado") || ""),
+    domingo: String(formData.get("domingo") || ""),
+    slot_minutes: Math.min(120, Math.max(5, Number(formData.get("slot_minutes")) || 15)),
   };
   const { error } = await supabase.from("settings").update({ value }).eq("key", "business_hours");
   if (error) return { error: "No se pudieron guardar los horarios.", success: "" };
   revalidatePath("/configuracion");
+  revalidatePath("/dashboard");
   return { error: "", success: "Horarios actualizados." };
 }
 

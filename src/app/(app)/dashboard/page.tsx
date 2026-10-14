@@ -61,7 +61,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     patient_name: a.patients?.full_name ?? null,
     phone: a.patients?.phone ?? null,
   }));
-  const businessHours: BusinessHours = (hoursSetting?.value as BusinessHours) ?? { lunes_viernes: "09:00-19:00", sabado: "09:00-14:00" };
+  const businessHours: BusinessHours = (hoursSetting?.value as BusinessHours) ?? { lunes_viernes: "17:30-22:00", sabado: "10:00-16:00", domingo: "10:00-16:00", slot_minutes: 15 };
 
   return (
     <div>
