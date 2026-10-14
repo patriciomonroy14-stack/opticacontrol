@@ -24,7 +24,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
     : { data: null };
   const showFinance = canSeeFinance(profile?.role);
 
-  const [{ data: summary }, { data: monthAppointments }, { data: readyOrders }, { data: recentSales }, { data: toContact }, { data: hoursSetting }] =
+  const [{ data: summary }, { data: monthAppointments }, { data: readyOrders }, { data: recentSales }, { data: toContact }, { data: hoursSetting }, { data: patientOptions }] =
     await Promise.all([
       supabase.from("dashboard_summary").select("*").maybeSingle(),
       supabase
@@ -48,6 +48,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         .order("months_since_last_purchase", { ascending: false })
         .limit(5),
       supabase.from("settings").select("value").eq("key", "business_hours").maybeSingle(),
+      supabase.from("patients").select("id, full_name").eq("status", "activo").order("full_name"),
     ]);
 
   const calendarAppointments: CalendarAppointment[] = (monthAppointments || []).map((a: any) => ({
@@ -76,19 +77,15 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         }
       />
 
-      <Card className="p-5 mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-display font-semibold text-lg text-[var(--oc-blue-950)]">Agenda</h2>
-          <Link href="/agenda" className="text-xs font-medium text-[var(--oc-blue-700)]">Ver agenda completa</Link>
-        </div>
+      <Card className="p-4 md:p-5 mb-6">
         <AgendaCalendar
           key={month}
           month={month}
           today={today}
           nowMinutes={nowMinutes}
-          initialDay={month === today.slice(0, 7) ? today : monthStart}
           appointments={calendarAppointments}
           businessHours={businessHours}
+          patients={patientOptions || []}
         />
       </Card>
 

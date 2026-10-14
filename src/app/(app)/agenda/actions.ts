@@ -5,7 +5,10 @@ import { logActivity } from "@/app/(app)/actions";
 import { revalidatePath } from "next/cache";
 import type { AppointmentStatus } from "@/lib/types";
 
-export async function createAppointment(_prevState: { error: string }, formData: FormData) {
+export async function createAppointment(
+  _prevState: { error: string; ok?: boolean },
+  formData: FormData,
+): Promise<{ error: string; ok?: boolean }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -63,7 +66,7 @@ export async function createAppointment(_prevState: { error: string }, formData:
   await logActivity({ action: "crear_hora", entity_type: "appointment", details: payload });
   revalidatePath("/agenda");
   revalidatePath("/dashboard");
-  return { error: "" };
+  return { error: "", ok: true };
 }
 
 export async function updateAppointmentStatus(appointmentId: string, status: AppointmentStatus) {
