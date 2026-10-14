@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { createAppointment } from "./actions";
 import { Field, inputCls } from "@/components/ui";
+import { todayCL } from "@/lib/types";
 
 export function NewAppointmentForm({ patients }: { patients: { id: string; full_name: string }[] }) {
   const [state, formAction, pending] = useActionState(createAppointment, { error: "" });
@@ -29,7 +30,7 @@ export function NewAppointmentForm({ patients }: { patients: { id: string; full_
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Fecha">
-          <input name="appointment_date" type="date" required className={inputCls} defaultValue={new Date().toISOString().slice(0, 10)} />
+          <input name="appointment_date" type="date" required className={inputCls} defaultValue={todayCL()} />
         </Field>
         <Field label="Hora">
           <input name="appointment_time" type="time" required className={inputCls} />

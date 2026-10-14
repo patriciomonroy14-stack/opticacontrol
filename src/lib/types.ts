@@ -196,6 +196,23 @@ export interface OrderRow {
   updated_at: string;
 }
 
+/** Fecha de hoy (YYYY-MM-DD) en hora de Chile. */
+export function todayCL(offsetDays = 0) {
+  const base = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date());
+  const d = new Date(base + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Link de WhatsApp para un teléfono chileno, o null si no se puede armar. */
+export function whatsappLink(phone: string | null | undefined) {
+  if (!phone) return null;
+  let digits = phone.replace(/\D/g, "");
+  if (digits.length === 9 && digits.startsWith("9")) digits = "56" + digits;
+  if (digits.length < 10) return null;
+  return `https://wa.me/${digits}`;
+}
+
 export function formatCLP(value: number | null | undefined) {
   if (value == null) return "$0";
   return new Intl.NumberFormat("es-CL", { style: "currency", currency: "CLP", maximumFractionDigits: 0 }).format(value);

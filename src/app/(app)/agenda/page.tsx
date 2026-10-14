@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card, EmptyState } from "@/components/ui";
-import { formatDate, APPOINTMENT_STATUS_LABELS } from "@/lib/types";
+import { formatDate, todayCL, APPOINTMENT_STATUS_LABELS } from "@/lib/types";
 import { AppointmentActions } from "./AppointmentActions";
 import { NewAppointmentForm } from "./NewAppointmentForm";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -14,7 +14,7 @@ function shiftDate(dateStr: string, days: number) {
 
 export default async function AgendaPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const { date } = await searchParams;
-  const selectedDate = date || new Date().toISOString().slice(0, 10);
+  const selectedDate = date || todayCL();
   const supabase = await createClient();
 
   const [{ data: appointments }, { data: patients }] = await Promise.all([
@@ -42,7 +42,7 @@ export default async function AgendaPage({ searchParams }: { searchParams: Promi
                 <ChevronRight className="h-4 w-4" />
               </Link>
             </div>
-            <Link href={`/agenda?date=${new Date().toISOString().slice(0, 10)}`} className="text-xs font-medium text-[var(--oc-blue-700)]">Hoy</Link>
+            <Link href={`/agenda?date=${todayCL()}`} className="text-xs font-medium text-[var(--oc-blue-700)]">Hoy</Link>
           </div>
 
           <Card>
