@@ -18,7 +18,7 @@ export type FrameStatus = "disponible" | "reservado" | "vendido" | "baja";
 export type FocalType = "monofocal" | "bifocal" | "progresivo";
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
-  venta_ingresada: "Venta ingresada",
+  venta_ingresada: "Pendiente",
   receta_revisada: "Receta revisada",
   enviado_laboratorio: "Enviado al laboratorio",
   en_fabricacion: "En fabricación",
@@ -29,16 +29,32 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   cancelado: "Cancelado",
 };
 
-export const ORDER_STATUS_SEQUENCE: OrderStatus[] = [
-  "venta_ingresada",
-  "receta_revisada",
-  "enviado_laboratorio",
-  "en_fabricacion",
-  "recibido_en_optica",
-  "control_calidad",
-  "listo_para_entregar",
-  "entregado",
-];
+/** Estados que se usan al registrar y seguir un pedido. */
+export const ORDER_STATUS_SEQUENCE: OrderStatus[] = ["venta_ingresada", "en_fabricacion", "listo_para_entregar", "entregado"];
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  efectivo: "Efectivo",
+  transferencia: "Transferencia",
+  debito: "Débito",
+  credito: "Crédito",
+  otro: "Otro",
+};
+
+export const PAYMENT_KIND_LABELS: Record<string, string> = {
+  inicial: "Abono inicial",
+  abono: "Abono",
+  pago_final: "Pago final",
+};
+
+/** Día (YYYY-MM-DD) en hora de Chile de una fecha/hora guardada. */
+export function chileDay(timestamp: string | Date) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Santiago" }).format(new Date(timestamp));
+}
+
+export function formatTimeCL(timestamp: string | null | undefined) {
+  if (!timestamp) return "—";
+  return new Intl.DateTimeFormat("es-CL", { hour: "2-digit", minute: "2-digit", timeZone: "America/Santiago" }).format(new Date(timestamp));
+}
 
 export const APPOINTMENT_STATUS_LABELS: Record<AppointmentStatus, string> = {
   reservada: "Reservada",

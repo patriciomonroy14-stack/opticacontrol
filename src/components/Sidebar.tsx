@@ -16,6 +16,7 @@ import {
   UserCog,
   Settings,
   Eye,
+  Wallet,
 } from "lucide-react";
 import { canSeeFinance } from "@/lib/types";
 
@@ -26,6 +27,7 @@ const NAV = [
   { href: "/cotizaciones", label: "Cotizaciones", icon: FileText },
   { href: "/ventas", label: "Ventas", icon: ShoppingCart },
   { href: "/ordenes", label: "Órdenes", icon: PackageCheck },
+  { href: "/caja", label: "Caja diaria", icon: Wallet },
   { href: "/armazones", label: "Armazones", icon: Glasses },
   { href: "/cristales", label: "Cristales", icon: Sparkles },
   { href: "/marketing", label: "Marketing", icon: Megaphone },
@@ -36,7 +38,7 @@ const NAV = [
 
 function navFor(role: string) {
   return NAV.filter((item) => {
-    if (item.href === "/reportes") return canSeeFinance(role);
+    if (item.href === "/reportes" || item.href === "/caja") return canSeeFinance(role);
     if (item.href === "/usuarios") return role === "administrador";
     return true;
   });

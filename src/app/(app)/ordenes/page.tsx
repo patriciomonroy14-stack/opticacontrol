@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { PageHeader, Card, Badge, EmptyState } from "@/components/ui";
-import { formatDate, ORDER_STATUS_LABELS, PURCHASE_TYPE_LABELS } from "@/lib/types";
+import { PageHeader, Card, EmptyState } from "@/components/ui";
+import { formatCLP, formatDate, PURCHASE_TYPE_LABELS } from "@/lib/types";
 import { OrderStatusControl, ContactButton } from "./OrderControls";
 import Link from "next/link";
 
@@ -17,7 +17,7 @@ export default async function OrdenesPage({ searchParams }: { searchParams: Prom
 
   let query = supabase
     .from("orders")
-    .select("id, status, created_at, arrived_at, contacted, sales(id, sale_date, total, purchase_type, patients(id, full_name, phone))")
+    .select("id, status, created_at, arrived_at, contacted, sales(id, work_order_number, sale_date, total, amount_paid, estimated_delivery, purchase_type, patients(id, full_name, phone))")
     .order("created_at", { ascending: false });
 
   if (filter === "listo_para_entregar") query = query.eq("status", "listo_para_entregar");
@@ -52,16 +52,24 @@ export default async function OrdenesPage({ searchParams }: { searchParams: Prom
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-left text-xs text-[var(--oc-slate-500)] border-b border-[var(--oc-slate-200)]">
+                  <th className="py-3 px-5 font-medium">N° orden</th>
                   <th className="py-3 px-5 font-medium">Paciente</th>
                   <th className="py-3 px-5 font-medium">Producto</th>
-                  <th className="py-3 px-5 font-medium">Fecha compra</th>
+                  <th className="py-3 px-5 font-medium">Entrega estimada</th>
+                  <th className="py-3 px-5 font-medium text-right">Saldo</th>
                   <th className="py-3 px-5 font-medium">Estado</th>
                   <th className="py-3 px-5 font-medium">Contacto</th>
+                  <th className="py-3 px-5 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
                 {orders.map((o: any) => (
                   <tr key={o.id} className="border-b border-[var(--oc-slate-100)] last:border-0">
+                    <td className="py-3 px-5">
+                      <Link href={`/ventas/${o.sales?.id}`} className="font-semibold text-[var(--oc-blue-800)] hover:underline whitespace-nowrap">
+                        {o.sales?.work_order_number ?? "Ver"}
+                      </Link>
+                    </td>
                     <td className="py-3 px-5">
                       <Link href={`/pacientes/${o.sales?.patients?.id}`} className="font-medium text-[var(--oc-blue-800)] hover:underline">
                         {o.sales?.patients?.full_name}
@@ -69,10 +77,20 @@ export default async function OrdenesPage({ searchParams }: { searchParams: Prom
                       <p className="text-xs text-[var(--oc-slate-500)]">{o.sales?.patients?.phone}</p>
                     </td>
                     <td className="py-3 px-5 text-[var(--oc-slate-500)]">{PURCHASE_TYPE_LABELS[o.sales?.purchase_type as keyof typeof PURCHASE_TYPE_LABELS]}</td>
-                    <td className="py-3 px-5 text-[var(--oc-slate-500)]">{formatDate(o.sales?.sale_date)}</td>
+                    <td className="py-3 px-5 text-[var(--oc-slate-500)]">{formatDate(o.sales?.estimated_delivery)}</td>
+                    <td className={`py-3 px-5 text-right tabular-nums font-semibold ${Number(o.sales?.total) - Number(o.sales?.amount_paid) > 0 ? "text-[var(--oc-amber)]" : "text-[var(--oc-slate-500)]"}`}>
+                      {formatCLP(Math.max(Number(o.sales?.total) - Number(o.sales?.amount_paid), 0))}
+                    </td>
                     <td className="py-3 px-5"><OrderStatusControl orderId={o.id} status={o.status} /></td>
                     <td className="py-3 px-5">
                       {o.status === "listo_para_entregar" ? <ContactButton orderId={o.id} contacted={o.contacted} /> : <span className="text-xs text-[var(--oc-slate-500)]">—</span>}
+                    </td>
+                    <td className="py-3 px-5">
+                      {o.status !== "entregado" && o.status !== "cancelado" && (
+                        <Link href={`/ventas/${o.sales?.id}`} className="inline-flex items-center gap-1 rounded-full bg-[var(--oc-green)] text-white text-xs font-semibold px-3 py-1.5 hover:opacity-90 whitespace-nowrap">
+                          ✓ Entregar
+                        </Link>
+                      )}
                     </td>
                   </tr>
                 ))}

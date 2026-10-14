@@ -3,7 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import { createSale } from "../actions";
 import { Field, inputCls } from "@/components/ui";
-import { formatCLP } from "@/lib/types";
+import { formatCLP, todayCL, PAYMENT_METHOD_LABELS, ORDER_STATUS_LABELS, ORDER_STATUS_SEQUENCE } from "@/lib/types";
 
 type Frame = { id: string; code: string; brand: string | null; model: string | null; sale_price: number | null; stock: number };
 type Patient = { id: string; full_name: string };
@@ -37,7 +37,7 @@ export function NewSaleForm({
   lensFilters,
   lensFilterColors,
   lensFilterPrices,
-  defaultPatientId,
+  defaultPatientName,
 }: {
   patients: Patient[];
   frames: Frame[];
@@ -47,7 +47,7 @@ export function NewSaleForm({
   lensFilters: LensFilter[];
   lensFilterColors: LensFilterColor[];
   lensFilterPrices: LensFilterPrice[];
-  defaultPatientId?: string;
+  defaultPatientName?: string;
 }) {
   const [state, formAction, pending] = useActionState(createSale, { error: "" });
   const [purchaseType, setPurchaseType] = useState("armazon_cristales");
@@ -58,7 +58,8 @@ export function NewSaleForm({
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string | null>>({});
   const [accessoriesPrice, setAccessoriesPrice] = useState(0);
   const [discount, setDiscount] = useState(0);
-  const [amountPaid, setAmountPaid] = useState(0);
+  const [initialPayment, setInitialPayment] = useState(0);
+  const [manualLensPrice, setManualLensPrice] = useState(0);
 
   const showLens = purchaseType !== "solo_armazon" && purchaseType !== "accesorios";
   const showFrame = purchaseType !== "solo_cristales" && purchaseType !== "accesorios" && !clientOwnsFrame;
@@ -78,10 +79,12 @@ export function NewSaleForm({
   }, [selectedFilters, materialId, lensFilterPrices, lensFilters]);
 
   const filtersTotal = filtersBreakdown.reduce((sum, f) => sum + (f.price || 0), 0);
-  const lensPrice = showLens ? (basePrice || 0) + filtersTotal : 0;
+  const usingCatalog = Boolean(lensTypeId && materialId);
+  const lensPrice = showLens ? (usingCatalog ? (basePrice || 0) + filtersTotal : Number(manualLensPrice || 0)) : 0;
   const framePrice = showFrame ? frames.find((f) => f.id === frameId)?.sale_price || 0 : 0;
   const subtotal = framePrice + lensPrice + Number(accessoriesPrice || 0);
   const total = Math.max(subtotal - Number(discount || 0), 0);
+  const balance = Math.max(total - Number(initialPayment || 0), 0);
 
   const filtersJson = JSON.stringify(Object.entries(selectedFilters).map(([filter_id, color_id]) => ({ filter_id, color_id })));
 
@@ -97,11 +100,23 @@ export function NewSaleForm({
   return (
     <form action={formAction} className="space-y-5">
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Paciente *">
-          <select name="patient_id" required defaultValue={defaultPatientId || ""} className={inputCls}>
-            <option value="" disabled>Selecciona un paciente…</option>
-            {patients.map((p) => <option key={p.id} value={p.id}>{p.full_name}</option>)}
-          </select>
+        <Field label="Paciente o cliente *">
+          <input name="patient_name" required list="sale-patients" autoComplete="off" defaultValue={defaultPatientName} className={inputCls} placeholder="Escribe el nombre…" />
+          <datalist id="sale-patients">
+            {patients.map((p) => <option key={p.id} value={p.full_name} />)}
+          </datalist>
+        </Field>
+        <Field label="Teléfono (opcional)">
+          <input name="patient_phone" type="tel" className={inputCls} placeholder="+56 9 1234 5678" />
+        </Field>
+      </div>
+
+      <div className="grid sm:grid-cols-3 gap-4">
+        <Field label="N° orden de trabajo" hint="Déjalo vacío para asignarlo automáticamente">
+          <input name="work_order_number" className={inputCls} placeholder="Automático" />
+        </Field>
+        <Field label="Fecha del pedido">
+          <input name="order_date" type="date" defaultValue={todayCL()} className={inputCls} />
         </Field>
         <Field label="Tipo de compra">
           <select name="purchase_type" value={purchaseType} onChange={(e) => setPurchaseType(e.target.value)} className={inputCls}>
@@ -133,7 +148,10 @@ export function NewSaleForm({
 
       {showLens && (
         <div className="bg-[var(--oc-slate-100)] rounded-xl p-4 space-y-4">
-          <p className="text-sm font-semibold text-[var(--oc-blue-950)]">Cristal</p>
+          <p className="text-sm font-semibold text-[var(--oc-blue-950)]">Lente y cristales</p>
+          <Field label="Tipo de lente y cristales solicitados">
+            <input name="lens_description" className={inputCls} placeholder="Ej: Progresivo, policarbonato, antirreflejo + fotocromático" />
+          </Field>
           <div className="grid sm:grid-cols-2 gap-3">
             <Field label="Tipo de cristal">
               <select name="lens_type_id" value={lensTypeId} onChange={(e) => setLensTypeId(e.target.value)} className={inputCls}>
@@ -148,6 +166,12 @@ export function NewSaleForm({
               </select>
             </Field>
           </div>
+
+          {!usingCatalog && (
+            <Field label="Precio manual del cristal" hint="Úsalo si el cristal no está en el catálogo">
+              <input type="number" min={0} name="manual_lens_price" value={manualLensPrice} onChange={(e) => setManualLensPrice(Number(e.target.value))} className={inputCls} />
+            </Field>
+          )}
 
           {lensTypeId && materialId && (
             <>
@@ -218,19 +242,38 @@ export function NewSaleForm({
         </Field>
       </div>
 
+      <div className="rounded-xl border border-[var(--oc-slate-200)] p-4 space-y-4">
+        <p className="text-sm font-semibold text-[var(--oc-blue-950)]">Pago</p>
+        <div className="grid sm:grid-cols-3 gap-4">
+          <Field label="Abono inicial">
+            <input type="number" name="initial_payment" min={0} max={total} value={initialPayment} onChange={(e) => setInitialPayment(Number(e.target.value))} className={inputCls} />
+          </Field>
+          <Field label="Medio de pago">
+            <select name="payment_method" className={inputCls} defaultValue="" required={initialPayment > 0}>
+              <option value="">Selecciona…</option>
+              {(["efectivo", "transferencia", "debito", "credito"] as const).map((m) => (
+                <option key={m} value={m}>{PAYMENT_METHOD_LABELS[m]}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Saldo pendiente">
+            <input readOnly value={formatCLP(balance)} className={`${inputCls} tabular-nums font-semibold ${balance > 0 ? "bg-[var(--oc-amber-bg)] text-[var(--oc-amber)]" : "bg-[var(--oc-green-bg)] text-[var(--oc-green)]"}`} />
+          </Field>
+        </div>
+        {initialPayment > total && <p className="text-sm text-[var(--oc-red)]">El abono no puede superar el total.</p>}
+        <p className="text-xs text-[var(--oc-slate-500)]">A la caja de hoy entra solo el abono recibido, no el total de la venta.</p>
+      </div>
+
       <div className="grid sm:grid-cols-2 gap-4">
-        <Field label="Método de pago">
-          <select name="payment_method" className={inputCls} defaultValue="">
-            <option value="">Selecciona…</option>
-            <option value="efectivo">Efectivo</option>
-            <option value="debito">Débito</option>
-            <option value="credito">Crédito</option>
-            <option value="transferencia">Transferencia</option>
-            <option value="otro">Otro</option>
-          </select>
+        <Field label="Fecha estimada de entrega">
+          <input name="estimated_delivery" type="date" className={inputCls} />
         </Field>
-        <Field label="Monto pagado" hint={total > 0 && amountPaid < total ? `Saldo pendiente: ${formatCLP(total - amountPaid)}` : undefined}>
-          <input type="number" name="amount_paid" min={0} value={amountPaid} onChange={(e) => setAmountPaid(Number(e.target.value))} className={inputCls} />
+        <Field label="Estado del pedido">
+          <select name="order_status" defaultValue="en_fabricacion" className={inputCls}>
+            {ORDER_STATUS_SEQUENCE.map((st) => (
+              <option key={st} value={st}>{ORDER_STATUS_LABELS[st]}</option>
+            ))}
+          </select>
         </Field>
       </div>
 

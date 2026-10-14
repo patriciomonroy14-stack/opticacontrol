@@ -28,7 +28,7 @@ export default async function NuevaVentaPage({ searchParams }: { searchParams: P
 
   return (
     <div className="max-w-2xl">
-      <PageHeader title="Nueva venta" description="Registra armazón, cristales, accesorios y forma de pago" />
+      <PageHeader title="Nueva venta" description="Registra el pedido, el abono inicial y la fecha de entrega" />
       <Card className="p-6">
         <NewSaleForm
           patients={patients || []}
@@ -39,7 +39,7 @@ export default async function NuevaVentaPage({ searchParams }: { searchParams: P
           lensFilters={lensFilters || []}
           lensFilterColors={lensFilterColors || []}
           lensFilterPrices={lensFilterPrices || []}
-          defaultPatientId={paciente}
+          defaultPatientName={(patients || []).find((p) => p.id === paciente)?.full_name}
         />
       </Card>
     </div>

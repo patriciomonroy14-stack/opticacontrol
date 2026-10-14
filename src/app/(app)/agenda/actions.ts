@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logActivity } from "@/app/(app)/actions";
 import { revalidatePath } from "next/cache";
 import type { AppointmentStatus } from "@/lib/types";
+import { findOrCreatePatient } from "@/lib/patients";
 
 export async function createAppointment(
   _prevState: { error: string; ok?: boolean },
@@ -23,30 +24,11 @@ export async function createAppointment(
     return { error: "Escribe el nombre del paciente, la fecha y la hora." };
   }
 
-  // Buscar si el paciente ya existe (mismo nombre, sin importar mayúsculas)
-  const escaped = patientName.replace(/[\\%_]/g, (c) => "\\" + c);
-  const { data: matches } = await supabase
-    .from("patients")
-    .select("id, phone, status")
-    .ilike("full_name", escaped)
-    .order("status", { ascending: true })
-    .limit(1);
-
-  let patientId = matches?.[0]?.id as string | undefined;
-
-  if (patientId) {
-    if (patientPhone && !matches?.[0]?.phone) {
-      await supabase.from("patients").update({ phone: patientPhone }).eq("id", patientId);
-    }
-  } else {
-    const { data: created, error: createError } = await supabase
-      .from("patients")
-      .insert({ full_name: patientName, phone: patientPhone, created_by: user?.id ?? null })
-      .select("id")
-      .single();
-    if (createError || !created) return { error: "No se pudo registrar al paciente." };
-    patientId = created.id;
-    await logActivity({ action: "crear_paciente", entity_type: "patient", entity_id: created.id, details: { full_name: patientName, origen: "agenda" } });
+  const found = await findOrCreatePatient(supabase, patientName, patientPhone, user?.id ?? null);
+  if ("error" in found) return { error: found.error };
+  const patientId = found.id;
+  if (found.created) {
+    await logActivity({ action: "crear_paciente", entity_type: "patient", entity_id: patientId, details: { full_name: patientName, origen: "agenda" } });
     revalidatePath("/pacientes");
   }
 
