@@ -44,6 +44,17 @@ export const PAYMENT_KIND_LABELS: Record<string, string> = {
   inicial: "Abono inicial",
   abono: "Abono",
   pago_final: "Pago final",
+  reverso: "Reverso / devolución",
+};
+
+export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {
+  general: "Gasto general",
+  proveedor: "Pago a proveedor",
+  laboratorio: "Pago a laboratorio",
+  sueldos: "Sueldos",
+  arriendo: "Arriendo",
+  servicios: "Servicios básicos",
+  retiro: "Retiro de dinero",
 };
 
 /** Día (YYYY-MM-DD) en hora de Chile de una fecha/hora guardada. */
@@ -88,7 +99,29 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 
 /** Puede ver montos agregados: reportes, ventas del día/mes, cierres de caja. */
 export function canSeeFinance(role: string | null | undefined) {
-  return role !== "encargada";
+  return role === "administrador";
+}
+
+/** Solo la administradora: anular, devolver, ajustar inventario, aprobar descuentos, reabrir caja. */
+export function isAdmin(role: string | null | undefined) {
+  return role === "administrador";
+}
+
+/** Puede registrar ventas, abonos y entregas. */
+export function canSell(role: string | null | undefined) {
+  return role === "administrador" || role === "encargada" || role === "recepcionista" || role === "vendedor";
+}
+
+/** Secciones del menú visibles para cada rol. */
+export function canSeeSection(role: string | null | undefined, href: string) {
+  if (role === "administrador") return true;
+  const finance = ["/reportes", "/caja", "/panel", "/respaldo", "/usuarios"];
+  if (finance.includes(href)) return false;
+  if (role === "encargada") return true;
+  if (role === "vendedor") return !["/marketing", "/configuracion"].includes(href);
+  if (role === "recepcionista") return !["/configuracion", "/armazones", "/cristales"].includes(href);
+  if (role === "solo_consulta") return ["/dashboard", "/agenda", "/pacientes", "/ordenes"].includes(href);
+  return false;
 }
 
 /** Puede administrar configuración y catálogo de cristales. */

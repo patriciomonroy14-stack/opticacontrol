@@ -47,9 +47,17 @@ export default async function UsuariosPage() {
         )}
       </Card>
 
-      <p className="text-xs text-[var(--oc-slate-500)] mt-4">
-        Permisos por rol — Administrador: acceso completo. Recepcionista: pacientes, agenda, recetas y ventas. Vendedor: pacientes, ventas e inventario. Solo consulta: solo lectura.
-      </p>
+      <Card className="p-5 mt-6 text-sm">
+        <h2 className="font-display font-semibold text-[var(--oc-blue-950)] mb-3">Qué puede hacer cada rol</h2>
+        <ul className="space-y-2 text-[var(--oc-slate-700)]">
+          <li><b>Administrador:</b> todo. Es el único que ve caja, reportes, panel, rentabilidad, costos y auditoría, y el único que puede anular ventas, reversar pagos, aprobar descuentos sobre el tope, ajustar inventario, registrar devoluciones y reabrir cajas cerradas.</li>
+          <li><b>Encargada:</b> todo el trabajo diario (agenda, pacientes, cotizaciones, ventas, abonos, entregas, laboratorio, armazones, cristales, marketing y configuración), sin información financiera.</li>
+          <li><b>Vendedor:</b> agenda, pacientes, cotizaciones, ventas, abonos, entregas, cobranza, armazones y cristales.</li>
+          <li><b>Recepcionista:</b> agenda, pacientes, cotizaciones, ventas, abonos, entregas, cobranza y marketing.</li>
+          <li><b>Solo consulta:</b> ve agenda, pacientes y órdenes, sin modificar.</li>
+        </ul>
+        <p className="text-xs text-[var(--oc-slate-500)] mt-3">Toda acción queda registrada con fecha, hora y usuario en la Auditoría.</p>
+      </Card>
     </div>
   );
 }

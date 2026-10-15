@@ -18,7 +18,7 @@ import {
   Eye,
   Wallet,
 } from "lucide-react";
-import { canSeeFinance } from "@/lib/types";
+import { canSeeSection } from "@/lib/types";
 
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -37,11 +37,7 @@ const NAV = [
 ];
 
 function navFor(role: string) {
-  return NAV.filter((item) => {
-    if (item.href === "/reportes" || item.href === "/caja") return canSeeFinance(role);
-    if (item.href === "/usuarios") return role === "administrador";
-    return true;
-  });
+  return NAV.filter((item) => canSeeSection(role, item.href));
 }
 
 export function Sidebar({ role }: { role: string }) {

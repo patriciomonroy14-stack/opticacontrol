@@ -25,7 +25,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
 
   let query = supabase
     .from("sales")
-    .select("id, work_order_number, sale_date, total, amount_paid, estimated_delivery, patients(id, full_name), orders(status)")
+    .select("id, work_order_number, sale_date, total, amount_paid, estimated_delivery, voided_at, patients(id, full_name), orders(status)")
     .order("sale_date", { ascending: false })
     .limit(200);
   if (q?.trim()) query = query.ilike("work_order_number", `%${q.trim()}%`);
@@ -34,8 +34,8 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
   const today = todayCL();
   const sales = (rawSales || [])
     .map((s: any) => {
-      const status = (s.orders?.[0]?.status ?? "venta_ingresada") as OrderStatus;
-      const balance = Math.max(Number(s.total) - Number(s.amount_paid), 0);
+      const status = (s.voided_at ? "cancelado" : s.orders?.[0]?.status ?? "venta_ingresada") as OrderStatus;
+      const balance = s.voided_at ? 0 : Math.max(Number(s.total) - Number(s.amount_paid), 0);
       return { ...s, status, balance };
     })
     .filter((s) => {
@@ -118,7 +118,7 @@ export default async function VentasPage({ searchParams }: { searchParams: Promi
                         {formatCLP(s.balance)}
                       </td>
                       <td className="py-3 px-4">
-                        <Badge tone={statusTone(s.status as OrderStatus)}>{ORDER_STATUS_LABELS[s.status as OrderStatus]}</Badge>
+                        <Badge tone={statusTone(s.status as OrderStatus)}>{s.voided_at ? "Anulada" : ORDER_STATUS_LABELS[s.status as OrderStatus]}</Badge>
                       </td>
                       <td className={`py-3 px-4 whitespace-nowrap ${late ? "text-[var(--oc-red)] font-medium" : "text-[var(--oc-slate-500)]"}`}>
                         {s.status === "entregado" ? "✓" : formatDate(s.estimated_delivery)}

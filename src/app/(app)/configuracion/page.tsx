@@ -1,16 +1,19 @@
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui";
-import { OpticaInfoForm, BusinessHoursForm } from "./SettingsForms";
+import { OpticaInfoForm, BusinessHoursForm, PoliciesForm } from "./SettingsForms";
+import { getSession } from "@/lib/session";
 import { AutomationSwitch } from "./AutomationSwitch";
 import { Layers, ChevronRight } from "lucide-react";
 import Link from "next/link";
 
 export default async function ConfiguracionPage() {
   const supabase = await createClient();
-  const [{ data: opticaInfo }, { data: hours }, { data: automations }] = await Promise.all([
+  const { role } = await getSession();
+  const [{ data: opticaInfo }, { data: hours }, { data: automations }, { data: policies }] = await Promise.all([
     supabase.from("settings").select("value").eq("key", "optica_info").maybeSingle(),
     supabase.from("settings").select("value").eq("key", "business_hours").maybeSingle(),
     supabase.from("automation_rules").select("*").order("key"),
+    supabase.from("settings").select("value").eq("key", "policies").maybeSingle(),
   ]);
 
   return (
@@ -22,6 +25,13 @@ export default async function ConfiguracionPage() {
           <h2 className="font-display font-semibold text-[var(--oc-blue-950)] mb-4">Datos de la óptica</h2>
           <OpticaInfoForm name={opticaInfo?.value?.name || "Óptica Retiro"} logoUrl={opticaInfo?.value?.logo_url || null} />
         </Card>
+
+        {role === "administrador" && (
+          <Card className="p-6">
+            <h2 className="font-display font-semibold text-[var(--oc-blue-950)] mb-4">Descuentos</h2>
+            <PoliciesForm maxDiscountPct={Number((policies?.value as { max_discount_pct?: number } | null)?.max_discount_pct ?? 10)} />
+          </Card>
+        )}
 
         <Card className="p-6">
           <h2 className="font-display font-semibold text-[var(--oc-blue-950)] mb-4">Horarios de atención</h2>

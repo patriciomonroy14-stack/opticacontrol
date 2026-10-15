@@ -1,4 +1,3 @@
-import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Lock } from "lucide-react";
@@ -10,12 +9,16 @@ import {
   formatDateTime,
   formatTimeCL,
   todayCL,
+  EXPENSE_CATEGORY_LABELS,
   PAYMENT_KIND_LABELS,
   PAYMENT_METHOD_LABELS,
   type PaymentMethod,
 } from "@/lib/types";
 import { computeDay } from "@/lib/cash";
-import { CloseDayForm, DeleteExpenseButton, ExpenseForm, PrintButton, ReopenButton } from "./CajaControls";
+import { CloseDayForm, ExpenseForm, PrintButton } from "./CajaControls";
+import { ReasonAction } from "@/components/ReasonAction";
+import { reopenDay, voidExpense } from "./actions";
+import { getSession } from "@/lib/session";
 
 const METHOD_ORDER: PaymentMethod[] = ["efectivo", "transferencia", "debito", "credito", "otro"];
 
@@ -27,24 +30,22 @@ function shiftDate(date: string, days: number) {
 
 export default async function CajaPage({ searchParams }: { searchParams: Promise<{ fecha?: string }> }) {
   const { fecha } = await searchParams;
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { supabase, user, role } = await getSession();
   if (!user) redirect("/login");
-  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle();
-  if (!canSeeFinance(profile?.role)) redirect("/dashboard");
-  const isAdmin = profile?.role === "administrador";
+  if (!canSeeFinance(role)) redirect("/dashboard");
+  const isAdmin = role === "administrador";
 
   const today = todayCL();
   const date = fecha && /^\d{4}-\d{2}-\d{2}$/.test(fecha) ? fecha : today;
 
-  const [day, { data: closing }, { data: previous }] = await Promise.all([
+  const [day, { data: closingRow }, { data: previous }] = await Promise.all([
     computeDay(supabase, date),
     supabase.from("cash_closings").select("*").eq("closing_date", date).maybeSingle(),
     supabase.from("cash_closings").select("closing_date, counted_cash").lt("closing_date", date).order("closing_date", { ascending: false }).limit(1).maybeSingle(),
   ]);
 
+  // Una caja reabierta se trata como abierta
+  const closing = closingRow && !closingRow.reopened_at ? closingRow : null;
   const methods = METHOD_ORDER.filter((m) => day.income[m] || day.spent[m] || m !== "otro");
   const lateMovements = closing
     ? day.payments.filter((p) => new Date(p.paid_at) > new Date(closing.closed_at)).length +
@@ -168,7 +169,10 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
                       </td>
                       <td className="py-2.5 px-5 text-[var(--oc-slate-700)]">{PAYMENT_KIND_LABELS[p.kind] ?? p.kind}</td>
                       <td className="py-2.5 px-5 text-[var(--oc-slate-700)]">{PAYMENT_METHOD_LABELS[p.method as PaymentMethod] ?? p.method}</td>
-                      <td className="py-2.5 px-5 text-right font-semibold tabular-nums text-[var(--oc-blue-950)]">{formatCLP(p.amount)}</td>
+                      <td className={`py-2.5 px-5 text-right font-semibold tabular-nums ${Number(p.amount) < 0 ? "text-[var(--oc-red)]" : "text-[var(--oc-blue-950)]"}`}>
+                        {formatCLP(p.amount)}
+                        {p.void_reason && <p className="text-[11px] font-normal text-[var(--oc-red)]">{p.void_reason}</p>}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -185,20 +189,25 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
           ) : (
             <ul className="divide-y divide-[var(--oc-slate-100)] mb-4">
               {day.expenses.map((e) => (
-                <li key={e.id} className="py-2.5 flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-medium text-[var(--oc-blue-950)]">{e.description}</p>
-                    <p className="text-xs text-[var(--oc-slate-500)]">{PAYMENT_METHOD_LABELS[e.method as PaymentMethod]} · {formatTimeCL(e.created_at)}</p>
+                <li key={e.id} className="py-2.5 space-y-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className={e.voided_at ? "opacity-50" : ""}>
+                      <p className={`text-sm font-medium text-[var(--oc-blue-950)] ${e.voided_at ? "line-through" : ""}`}>{e.description}</p>
+                      <p className="text-xs text-[var(--oc-slate-500)]">
+                        {EXPENSE_CATEGORY_LABELS[e.category] ?? e.category} · {PAYMENT_METHOD_LABELS[e.method as PaymentMethod]} · {formatTimeCL(e.created_at)}
+                      </p>
+                      {e.voided_at && <p className="text-xs text-[var(--oc-red)]">Anulado: {e.void_reason}</p>}
+                    </div>
+                    <p className={`font-semibold tabular-nums text-[var(--oc-red)] ${e.voided_at ? "line-through opacity-50" : ""}`}>{formatCLP(e.amount)}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold tabular-nums text-[var(--oc-red)]">{formatCLP(e.amount)}</p>
-                    {isAdmin && !closing && <DeleteExpenseButton id={e.id} />}
-                  </div>
+                  {isAdmin && !closing && !e.voided_at && (
+                    <ReasonAction action={voidExpense.bind(null, e.id)} label="Anular gasto" small description="El gasto no se borra: queda tachado con su motivo y deja de sumar." />
+                  )}
                 </li>
               ))}
             </ul>
           )}
-          {!closing && (
+          {!closing && isAdmin && (
             <div className="border-t border-[var(--oc-slate-200)] pt-4 print:hidden">
               <ExpenseForm date={date} />
             </div>
@@ -212,9 +221,18 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
           <h2 className="font-display font-semibold text-[var(--oc-blue-950)] flex items-center gap-2">
             <Lock className="h-4 w-4" /> Cierre de caja
           </h2>
-          {closing && isAdmin && <ReopenButton date={date} />}
+          {closing && isAdmin && (
+            <div className="max-w-sm">
+              <ReasonAction action={reopenDay.bind(null, date)} label="Reabrir caja" tone="blue" small description="El cierre actual queda guardado en la auditoría. Podrás corregir y volver a cerrar." />
+            </div>
+          )}
         </div>
 
+        {closingRow?.reopened_at && (
+          <p className="mb-4 rounded-lg bg-[var(--oc-amber-bg)] text-[var(--oc-amber)] px-3 py-2 text-sm">
+            Caja reabierta el {formatDateTime(closingRow.reopened_at)}. Motivo: {closingRow.reopen_reason}. Corrige lo necesario y vuelve a cerrarla.
+          </p>
+        )}
         {closing ? (
           <div className="space-y-3">
             <div className="grid sm:grid-cols-4 gap-4 text-sm tabular-nums">
@@ -237,7 +255,10 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
                 </p>
               </div>
             </div>
-            <p className="text-xs text-[var(--oc-slate-500)]">Cerrada el {formatDateTime(closing.closed_at)}</p>
+            <p className="text-xs text-[var(--oc-slate-500)]">
+              Cerrada el {formatDateTime(closing.closed_at)}
+              {closing.times_reopened > 0 ? ` · reabierta ${closing.times_reopened} ${closing.times_reopened === 1 ? "vez" : "veces"} (ver auditoría)` : ""}
+            </p>
             {closing.notes && <p className="text-sm text-[var(--oc-slate-700)]">{closing.notes}</p>}
             {lateMovements > 0 && (
               <p className="rounded-lg bg-[var(--oc-amber-bg)] text-[var(--oc-amber)] px-3 py-2 text-sm">
@@ -246,6 +267,8 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
               </p>
             )}
           </div>
+        ) : !isAdmin ? (
+          <p className="text-sm text-[var(--oc-slate-500)]">Solo la administradora puede cerrar la caja.</p>
         ) : date > today ? (
           <p className="text-sm text-[var(--oc-slate-500)]">No se puede cerrar la caja de un día que aún no llega.</p>
         ) : (
@@ -253,7 +276,7 @@ export default async function CajaPage({ searchParams }: { searchParams: Promise
             date={date}
             cashIncome={day.cashIncome}
             cashExpenses={day.cashExpenses}
-            suggestedOpening={previous ? Number(previous.counted_cash) : 0}
+            suggestedOpening={closingRow ? Number(closingRow.opening_amount) : previous ? Number(previous.counted_cash) : 0}
           />
         )}
         {!closing && previous && (

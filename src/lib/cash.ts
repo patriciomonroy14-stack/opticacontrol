@@ -11,18 +11,19 @@ export async function computeDay(supabase: SupabaseClient, date: string) {
   const [{ data: rawPayments }, { data: expenses }] = await Promise.all([
     supabase
       .from("sale_payments")
-      .select("id, amount, method, kind, paid_at, received_by, sales(id, work_order_number, patients(full_name))")
+      .select("id, amount, method, kind, paid_at, received_by, void_reason, sales(id, work_order_number, patients(full_name))")
       .gte("paid_at", from.toISOString())
       .lt("paid_at", to.toISOString())
       .order("paid_at"),
-    supabase.from("cash_expenses").select("id, amount, method, description, created_at, created_by").eq("expense_date", date).order("created_at"),
+    supabase.from("cash_expenses").select("id, amount, method, description, category, created_at, created_by, voided_at, void_reason").eq("expense_date", date).order("created_at"),
   ]);
 
   const payments = (rawPayments || []).filter((p) => chileDay(p.paid_at) === date);
   const income: Record<string, number> = {};
   for (const p of payments) income[p.method] = (income[p.method] || 0) + Number(p.amount);
   const spent: Record<string, number> = {};
-  for (const e of expenses || []) spent[e.method] = (spent[e.method] || 0) + Number(e.amount);
+  // Los gastos anulados se muestran tachados, pero no suman
+  for (const e of expenses || []) if (!e.voided_at) spent[e.method] = (spent[e.method] || 0) + Number(e.amount);
 
   const totalIncome = Object.values(income).reduce((a, b) => a + b, 0);
   const totalExpenses = Object.values(spent).reduce((a, b) => a + b, 0);

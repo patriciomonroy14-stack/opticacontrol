@@ -140,7 +140,7 @@ export function NewSaleForm({
         <Field label="Armazón">
           <select name="frame_id" value={frameId} onChange={(e) => setFrameId(e.target.value)} className={inputCls}>
             <option value="">Sin armazón…</option>
-            {frames.map((f) => <option key={f.id} value={f.id}>{f.code} · {f.brand} {f.model} · {formatCLP(f.sale_price)} (stock {f.stock})</option>)}
+            {frames.map((f) => <option key={f.id} value={f.id}>{f.code} · {f.brand} {f.model} · {formatCLP(f.sale_price)} ({f.stock} disponible{f.stock === 1 ? "" : "s"})</option>)}
           </select>
           <input type="hidden" name="frame_price" value={framePrice} />
         </Field>
@@ -264,10 +264,15 @@ export function NewSaleForm({
         <p className="text-xs text-[var(--oc-slate-500)]">A la caja de hoy entra solo el abono recibido, no el total de la venta.</p>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid sm:grid-cols-3 gap-4">
         <Field label="Fecha estimada de entrega">
           <input name="estimated_delivery" type="date" className={inputCls} />
         </Field>
+        {balance > 0 && (
+          <Field label="Fecha de compromiso de pago del saldo" hint="Si la dejas vacía se usa la fecha de entrega">
+            <input name="payment_due_date" type="date" className={inputCls} />
+          </Field>
+        )}
         <Field label="Estado del pedido">
           <select name="order_status" defaultValue="en_fabricacion" className={inputCls}>
             {ORDER_STATUS_SEQUENCE.map((st) => (

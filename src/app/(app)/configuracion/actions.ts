@@ -44,3 +44,23 @@ export async function toggleAutomation(key: string, enabled: boolean) {
   await logActivity({ action: "actualizar_automatizacion", entity_type: "automation_rule", details: { key, enabled } });
   revalidatePath("/configuracion");
 }
+
+/** Políticas de la óptica (solo administradora): tope de descuento sin aprobación. */
+export async function updatePolicies(_prevState: SettingsState, formData: FormData): Promise<SettingsState> {
+  const { getSession } = await import("@/lib/session");
+  const { supabase, user, role } = await getSession();
+  if (!user || role !== "administrador") return { error: "Solo la administradora puede cambiar esto.", success: "" };
+  const pct = Number(formData.get("max_discount_pct"));
+  if (!Number.isFinite(pct) || pct < 0 || pct > 100) return { error: "Ingresa un porcentaje entre 0 y 100.", success: "" };
+
+  const { data: existing } = await supabase.from("settings").select("value").eq("key", "policies").maybeSingle();
+  const value = { ...((existing?.value as object) ?? {}), max_discount_pct: pct };
+  const { error } = existing
+    ? await supabase.from("settings").update({ value }).eq("key", "policies")
+    : await supabase.from("settings").insert({ key: "policies", value });
+  if (error) return { error: "No se pudo guardar.", success: "" };
+
+  await logActivity({ action: "actualizar_politicas", entity_type: "settings", details: { antes: existing?.value ?? null, despues: value } });
+  revalidatePath("/configuracion");
+  return { error: "", success: "Guardado." };
+}

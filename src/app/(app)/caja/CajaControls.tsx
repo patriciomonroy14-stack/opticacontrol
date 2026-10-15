@@ -1,10 +1,10 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Lock, Printer, Trash2, Unlock } from "lucide-react";
+import { Lock, Printer } from "lucide-react";
 import { Field, inputCls } from "@/components/ui";
-import { formatCLP, PAYMENT_METHOD_LABELS } from "@/lib/types";
-import { addExpense, closeDay, deleteExpense, reopenDay } from "./actions";
+import { formatCLP, PAYMENT_METHOD_LABELS, EXPENSE_CATEGORY_LABELS } from "@/lib/types";
+import { addExpense, closeDay } from "./actions";
 
 function ErrorBox({ message }: { message: string }) {
   if (!message) return null;
@@ -26,7 +26,14 @@ export function ExpenseForm({ date }: { date: string }) {
     <form key={formKey} action={formAction} className="space-y-3">
       <input type="hidden" name="expense_date" value={date} />
       <Field label="Descripción">
-        <input name="description" required className={inputCls} placeholder="Ej: Insumos de limpieza, flete laboratorio…" />
+        <input name="description" required className={inputCls} placeholder="Ej: Insumos de limpieza, pago a proveedor…" />
+      </Field>
+      <Field label="Tipo de gasto">
+        <select name="category" defaultValue="general" className={inputCls}>
+          {Object.entries(EXPENSE_CATEGORY_LABELS).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
       </Field>
       <div className="grid grid-cols-2 gap-3">
         <Field label="Monto">
@@ -47,26 +54,6 @@ export function ExpenseForm({ date }: { date: string }) {
         </button>
       </div>
     </form>
-  );
-}
-
-export function DeleteExpenseButton({ id }: { id: string }) {
-  const [pending, startTransition] = useTransition();
-  const [confirm, setConfirm] = useState(false);
-  if (!confirm) {
-    return (
-      <button type="button" onClick={() => setConfirm(true)} className="h-7 w-7 rounded-lg hover:bg-[var(--oc-red-bg)] flex items-center justify-center text-[var(--oc-slate-500)] hover:text-[var(--oc-red)]" aria-label="Eliminar gasto">
-        <Trash2 className="h-3.5 w-3.5" />
-      </button>
-    );
-  }
-  return (
-    <span className="flex items-center gap-1">
-      <button type="button" disabled={pending} onClick={() => startTransition(() => deleteExpense(id))} className="text-xs font-semibold text-[var(--oc-red)] hover:underline">
-        {pending ? "…" : "Eliminar"}
-      </button>
-      <button type="button" onClick={() => setConfirm(false)} className="text-xs text-[var(--oc-slate-500)] hover:underline">No</button>
-    </span>
   );
 }
 
@@ -133,27 +120,6 @@ export function CloseDayForm({
         </button>
       </div>
     </form>
-  );
-}
-
-export function ReopenButton({ date }: { date: string }) {
-  const [pending, startTransition] = useTransition();
-  const [confirm, setConfirm] = useState(false);
-  if (!confirm) {
-    return (
-      <button type="button" onClick={() => setConfirm(true)} className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--oc-slate-500)] hover:text-[var(--oc-blue-700)]">
-        <Unlock className="h-3.5 w-3.5" /> Reabrir caja
-      </button>
-    );
-  }
-  return (
-    <span className="flex items-center gap-2 text-xs">
-      <span className="text-[var(--oc-slate-700)]">¿Reabrir? Se borrará este cierre.</span>
-      <button type="button" disabled={pending} onClick={() => startTransition(() => reopenDay(date))} className="font-semibold text-[var(--oc-red)] hover:underline">
-        {pending ? "…" : "Sí, reabrir"}
-      </button>
-      <button type="button" onClick={() => setConfirm(false)} className="text-[var(--oc-slate-500)] hover:underline">No</button>
-    </span>
   );
 }
 

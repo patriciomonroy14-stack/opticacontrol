@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { updateOpticaInfo, updateBusinessHours } from "./actions";
+import { updateOpticaInfo, updateBusinessHours, updatePolicies } from "./actions";
 import { Field, inputCls } from "@/components/ui";
 
 export function OpticaInfoForm({ name, logoUrl }: { name: string; logoUrl: string | null }) {
@@ -54,6 +54,22 @@ export function BusinessHoursForm({
       {state.success && <p className="text-sm text-[var(--oc-green)] bg-[var(--oc-green-bg)] rounded-lg px-3 py-2">{state.success}</p>}
       <button type="submit" disabled={pending} className="rounded-full bg-[var(--oc-blue-700)] text-white text-sm font-semibold px-5 py-2.5 hover:bg-[var(--oc-blue-800)] disabled:opacity-60">
         {pending ? "Guardando…" : "Guardar horarios"}
+      </button>
+    </form>
+  );
+}
+
+export function PoliciesForm({ maxDiscountPct }: { maxDiscountPct: number }) {
+  const [state, formAction, pending] = useActionState(updatePolicies, { error: "", success: "" });
+  return (
+    <form action={formAction} className="space-y-4">
+      <Field label="Descuento máximo sin tu aprobación (%)" hint="Si alguien más intenta un descuento mayor, la venta se bloquea hasta que la registres tú.">
+        <input name="max_discount_pct" type="number" min={0} max={100} step={1} defaultValue={maxDiscountPct} className={inputCls} />
+      </Field>
+      {state.error && <p className="text-sm text-[var(--oc-red)] bg-[var(--oc-red-bg)] rounded-lg px-3 py-2">{state.error}</p>}
+      {state.success && <p className="text-sm text-[var(--oc-green)] bg-[var(--oc-green-bg)] rounded-lg px-3 py-2">{state.success}</p>}
+      <button type="submit" disabled={pending} className="rounded-full bg-[var(--oc-blue-700)] text-white text-sm font-semibold px-5 py-2.5 hover:bg-[var(--oc-blue-800)] disabled:opacity-60">
+        {pending ? "Guardando…" : "Guardar"}
       </button>
     </form>
   );
