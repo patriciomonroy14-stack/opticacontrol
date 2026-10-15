@@ -13,6 +13,7 @@ export function WhatsAppButton({
   message,
   label,
   compact = false,
+  orderId,
 }: {
   patientId: string;
   phone: string | null | undefined;
@@ -20,6 +21,7 @@ export function WhatsAppButton({
   message: string;
   label: string;
   compact?: boolean;
+  orderId?: string;
 }) {
   const href = whatsappMessageLink(phone, message);
   if (!href) {
@@ -31,7 +33,7 @@ export function WhatsAppButton({
       target="_blank"
       rel="noopener noreferrer"
       onClick={() => {
-        void logWhatsApp(patientId, kind, message);
+        void logWhatsApp(patientId, kind, message, orderId);
       }}
       title={label}
       className={`inline-flex items-center gap-1.5 rounded-full bg-[var(--oc-green-bg)] text-[var(--oc-green)] font-semibold hover:brightness-95 whitespace-nowrap ${

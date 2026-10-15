@@ -6,7 +6,7 @@ import { getSession } from "@/lib/session";
 import { WHATSAPP_KIND_LABELS, MARKETING_KINDS, type WhatsAppKind } from "@/lib/whatsapp";
 
 /** Registra en la ficha del paciente que se le abrió un mensaje de WhatsApp. */
-export async function logWhatsApp(patientId: string, kind: WhatsAppKind, body: string) {
+export async function logWhatsApp(patientId: string, kind: WhatsAppKind, body: string, orderId?: string) {
   const { supabase, user, role } = await getSession();
   if (!user || !canSell(role) || !WHATSAPP_KIND_LABELS[kind]) return { ok: false };
 
@@ -24,6 +24,10 @@ export async function logWhatsApp(patientId: string, kind: WhatsAppKind, body: s
     result: "whatsapp_manual",
     created_by: user.id,
   });
+  if (orderId && kind === "lentes_listos") {
+    await supabase.from("orders").update({ contacted: true, contacted_at: new Date().toISOString() }).eq("id", orderId);
+    revalidatePath("/ordenes");
+  }
   revalidatePath(`/pacientes/${patientId}`);
   return { ok: true };
 }

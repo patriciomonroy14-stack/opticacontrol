@@ -200,6 +200,7 @@ export default async function VentaDetallePage({ params }: { params: Promise<{ i
                   patientId={patient.id}
                   phone={patient.phone}
                   kind="lentes_listos"
+                  orderId={order?.id}
                   label="Avisar que están listos"
                   message={buildMessage("lentes_listos", { name: patient.name, order: s.work_order_number, balance })}
                 />
