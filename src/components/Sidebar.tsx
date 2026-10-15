@@ -18,11 +18,13 @@ import {
   Eye,
   Wallet,
   HandCoins,
+  Gauge,
 } from "lucide-react";
 import { canSeeSection } from "@/lib/types";
 
 const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/dashboard", label: "Inicio", icon: LayoutDashboard },
+  { href: "/panel", label: "Panel administrativo", icon: Gauge },
   { href: "/agenda", label: "Agenda", icon: CalendarDays },
   { href: "/pacientes", label: "Pacientes", icon: Users },
   { href: "/cotizaciones", label: "Cotizaciones", icon: FileText },
