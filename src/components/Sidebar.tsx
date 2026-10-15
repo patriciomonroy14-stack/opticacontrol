@@ -19,6 +19,8 @@ import {
   Wallet,
   HandCoins,
   Gauge,
+  ScrollText,
+  DatabaseBackup,
 } from "lucide-react";
 import { canSeeSection } from "@/lib/types";
 
@@ -38,6 +40,8 @@ const NAV = [
   { href: "/reportes", label: "Reportes", icon: BarChart3 },
   { href: "/usuarios", label: "Usuarios", icon: UserCog },
   { href: "/configuracion", label: "Configuración", icon: Settings },
+  { href: "/auditoria", label: "Auditoría", icon: ScrollText },
+  { href: "/respaldo", label: "Respaldo", icon: DatabaseBackup },
 ];
 
 function navFor(role: string) {

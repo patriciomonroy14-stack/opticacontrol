@@ -115,7 +115,7 @@ export function canSell(role: string | null | undefined) {
 /** Secciones del menú visibles para cada rol. */
 export function canSeeSection(role: string | null | undefined, href: string) {
   if (role === "administrador") return true;
-  const finance = ["/reportes", "/caja", "/panel", "/respaldo", "/usuarios"];
+  const finance = ["/reportes", "/caja", "/panel", "/respaldo", "/auditoria", "/usuarios"];
   if (finance.includes(href)) return false;
   if (role === "encargada") return true;
   if (role === "vendedor") return !["/marketing", "/configuracion"].includes(href);

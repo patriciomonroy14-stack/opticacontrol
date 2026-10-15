@@ -1,7 +1,7 @@
 # ÓpticaControl — Contexto del proyecto
 
 > Archivo para retomar el trabajo en una conversación nueva con Claude.
-> Súbelo al inicio y di qué quieres hacer. Última actualización: 14 de octubre de 2026.
+> Súbelo al inicio y di qué quieres hacer. Última actualización: 15 de octubre de 2026 (etapa 2).
 
 ## Qué es
 
@@ -24,14 +24,17 @@ Tecnología: Next.js 16 (App Router, Turbopack, server actions), React 19, Tailw
 
 ## Roles y permisos
 
+Reglas en un solo lugar: `src/lib/types.ts` → `canSeeFinance` (solo administrador), `isAdmin`, `canSell`, `canSeeSection(role, href)` (menú). Sesión y rol en el servidor: `getSession()` en `src/lib/session.ts`.
+
 | Rol | Puede |
 |---|---|
-| `administrador` | Todo. Único que ve el **precio de compra** de armazones, administra **Usuarios**, reabre cajas cerradas y borra gastos. |
-| `encargada` (Constanza) | Todo el día a día: agenda, pacientes, cotizaciones, ventas, abonos, entregas, órdenes, armazones, cristales, marketing, configuración y catálogo de cristales. **No ve:** Reportes, Caja diaria, cierres de caja, gastos, tarjetas de dinero del inicio, precio de compra ni Usuarios. |
-| `recepcionista`, `vendedor`, `solo_consulta` | Roles originales; no se usan hoy. |
+| `administrador` | Todo. Único que ve Panel, Caja, Reportes, Auditoría, Respaldo, Usuarios, costos y rentabilidad. Único que anula ventas, reversa pagos, anula gastos, reabre cajas, ajusta inventario, cambia precios/costos y aprueba descuentos sobre el tope. |
+| `encargada` (Constanza) | Todo el trabajo diario: agenda, pacientes, cotizaciones, ventas, abonos, entregas, laboratorio (fechas), cuentas por cobrar, armazones, cristales, marketing, configuración. Sin información financiera. |
+| `vendedor` | Agenda, pacientes, cotizaciones, ventas, abonos, entregas, cobranza, armazones, cristales. |
+| `recepcionista` | Agenda, pacientes, cotizaciones, ventas, abonos, entregas, cobranza, marketing. |
+| `solo_consulta` | Ver agenda, pacientes y órdenes. |
 
-- Ayudantes en código: `canSeeFinance(role)` (falso solo para encargada) e `isManager(role)` (administrador o encargada), en `src/lib/types.ts`.
-- En la base de datos: `current_role_name()`, `is_staff()`, `can_write()` (incluye encargada) e `is_manager()`. Las políticas RLS de `cash_closings` y `cash_expenses` excluyen a la encargada.
+En la base: `cash_closings`, `cash_expenses` y `activity_log` solo los lee la administradora (RLS). `can_write()` incluye encargada, vendedor y recepcionista. Crear cuentas nuevas requiere hacerlo con SQL o desde Supabase (la app no tiene clave de servicio); el rol se cambia en Usuarios.
 
 ## Lo que se hizo el 14-oct-2026
 
@@ -66,6 +69,24 @@ Tecnología: Next.js 16 (App Router, Turbopack, server actions), React 19, Tailw
      - Cierre con el efectivo contado y la diferencia. Hay un cierre por día (`cash_closings.closing_date` es único) y solo el administrador puede reabrirlo.
    - Probado: venta de $120.000 con abono de $50.000 → saldo $70.000, y a la caja entran $50.000.
 
+## Lo que se hizo el 15-oct-2026 (etapa 2)
+
+Decisiones de la usuaria: WhatsApp por botón que abre el chat con el mensaje escrito (no envío automático); armazón se **reserva al vender y se descuenta al entregar**; anulaciones/devoluciones/ajustes/descuentos sobre el tope **solo administradora**; formulario de armazones completo.
+
+1. **Sin borrados financieros.** Anular venta (`voidSale`) = reversos negativos de sus pagos (`sale_payments.kind='reverso'`, `reversal_of`), libera o devuelve el armazón, pedido `cancelado`, `sales.voided_at/voided_by/void_reason`. Reversar un pago suelto: `reversePayment`. Gastos: `voided_at` + motivo. Caja: reabrir marca `reopened_at/reopen_reason` (no borra); re-cerrar actualiza y deja el cierre anterior en auditoría. Componente `ReasonAction` pide el motivo.
+2. **Caja cerrada bloquea** pagos/abonos/reversos de ese día (`isCashClosed`).
+3. **Descuento extraordinario:** tope en `settings.policies.max_discount_pct` (por defecto 10%, editable en Configuración); sobre el tope solo la administradora (`sales.discount_approved_by`).
+4. **Inventario** (`src/lib/inventory.ts`): `frames.reserved`; disponible = stock − reservado; compare-and-swap para no vender dos veces la misma unidad; historial en `inventory_movements`. Ficha `/armazones/[id]` con ajustes/ingresos con motivo. Se desactivó el trigger `trg_decrement_frame_stock` (antes descontaba al vender). Al activar reservas se marcaron 4 armazones reservados de pedidos pendientes (stock no tocado: revisar conteo físico).
+5. **Laboratorio** en `orders`: `lab_name, lab_order_ref, lab_sent_at, lab_promised_date, lab_received_at, lab_cost, lab_paid, lab_paid_at`. Fechas las registra cualquiera que venda (el estado avanza solo); costo y pago solo administradora; pagar crea un gasto `laboratorio` en caja ligado al pedido (`cash_expenses.order_id`). Alertas de atraso en `/ordenes`.
+6. **Cuentas por cobrar** `/cobranza`: deuda, compromiso (`sales.payment_due_date`, o entrega estimada), días de atraso, abono rápido, recordatorio WhatsApp.
+7. **WhatsApp** (`src/lib/whatsapp.ts`, `WhatsAppButton`): lentes listos (marca pedido como avisado), recordatorio de saldo, renovación, confirmar hora. Cada clic queda en `communications`. Campañas 12/24 meses en Marketing respetan `patients.marketing_opt_out`. Se eliminó el envío de correos "simulado" que no enviaba nada.
+8. **Rentabilidad** (`src/lib/profit.ts`): venta − armazón (`sales.frame_cost`) − cristales (cobro real del laboratorio si existe; si no, costo de catálogo + filtros) − `sales.other_costs`. Solo administradora, separada de la caja.
+9. **Panel administrativo** `/panel`: ventas día/semana/mes, recaudación, caja, deudas, gastos por tipo, rentabilidad y margen, pedidos, inventario, gráfico 12 meses (paleta validada #2a78d6 / #eb6834) + tabla.
+10. **Auditoría** `/auditoria` y **Respaldo** `/respaldo` (JSON completo o CSV por tabla; ruta `/respaldo/descargar`). Solo administradora.
+11. **Errores corregidos:** la base solo aceptaba `kind` inicial/abono/saldo (el código de ayer usaba `pago_final`, habría fallado al pagar el saldo completo) y no aceptaba montos negativos. Ahora: `kind` ∈ inicial, abono, saldo, pago_final, reverso; negativo solo si es reverso con `reversal_of`.
+
+Probado en base (transacciones con rollback): ciclo abono → pago final → reverso; negativo sin reverso rechazado; permisos de Constanza (no ve caja/gastos/auditoría, sí vende). Fórmula de rentabilidad del código = cálculo SQL en todos los meses.
+
 ## Base de datos (lo principal)
 
 Tablas en uso, en inglés: `profiles`, `patients`, `prescriptions`, `appointments`, `frames`, `lens_*`, `quotes`, `sales`, `sale_filters`, `sale_payments`, `orders`, `order_status_history`, `cash_closings`, `cash_expenses`, `settings`, `automation_rules`, `email_templates`, `campaigns`, `communications`, `activity_log`.
@@ -83,17 +104,15 @@ Triggers relevantes:
 
 ## Pendientes y cosas a tener en cuenta
 
-- **Cambios grandes de base de datos se cancelan:** las migraciones grandes, las que borran algo (`DROP`) o las que crean triggers o funciones aparecieron como "cancelled" y no le llegó ningún aviso a la usuaria. Los cambios pequeños y aditivos sí pasan. Conviene aplicarlos por partes.
-- **No quedaron aplicados por ese motivo:**
-  - La regla en la base de datos que impide que un pago supere el saldo. Hoy ese control está **en la app** (`getBalance` en `src/app/(app)/ventas/actions.ts`).
-  - Mover el precio de compra de armazones a una tabla aparte solo para el administrador. Hoy se oculta desde la app, pero sigue en `frames.purchase_price`.
-- **Opción pendiente:** que solo la administradora pueda autorizar una entrega con deuda (por ejemplo, con clave). Hoy basta con marcar la confirmación y escribir el nombre de quien autoriza.
-- **Mensaje cortado:** el pedido original de "Caja diaria" se cortó en el punto 3; se implementó lo estándar (ingresos por medio, gastos, cierre con cuadre). Si había más requisitos (punto 4 en adelante), pedirlos.
-- **Supabase gratis se pausa** tras unos 7 días sin uso. Se ofreció crear una tarea que lo mantenga activo; no se hizo.
-- **Conexiones de Claude:**
-  - El conector de Vercel lista el proyecto, pero no tiene permiso para leerlo ni desplegar; se publica haciendo push a GitHub.
-  - La app de Claude en GitHub está instalada solo para el repo `opticacontrol`.
-- **Avisos de lint antiguos** en `configuracion/cristales/page.tsx` y `marketing/page.tsx` (no afectan la compilación).
+- **Migraciones:** las pequeñas pasan (incluso `drop/add constraint`); las grandes, con varias cosas a la vez, o que crean funciones/triggers aparecen "cancelled" sin aviso a la usuaria. Aplicar de a poco.
+- **No aplicado:** trigger en BD que impida pagar más que el saldo (control en la app: `getBalance`); mover `frames.purchase_price` a tabla solo-admin (hoy se oculta en la app, la encargada podría leerlo por API).
+- **Costos antiguos incompletos:** ventas viejas sin costo de cristal → márgenes de 100%. Se completa con costos de catálogo y cobro de laboratorio.
+- **Respaldo:** Supabase gratis no tiene copias diarias; descargar el respaldo semanalmente o pasar a Pro. Además se pausa tras ~7 días sin uso.
+- **Gastos de caja solo los registra la administradora** (Constanza no ve caja). Si Constanza paga algo con efectivo de la caja, debe avisar para registrarlo.
+- **Entrega con deuda:** basta confirmación + nombre de quien autoriza (no exige clave de la administradora).
+- **Crear usuarios:** no hay pantalla (falta clave de servicio); se crean por SQL.
+- **Lint antiguo** en `configuracion/cristales/page.tsx` y `marketing/page.tsx` (no afecta).
+- Mensaje pendiente de la usuaria: escribió "++" y "+63" a medianoche (probablemente sin querer); se le preguntó.
 
 ## Cómo trabajar en una conversación nueva
 
