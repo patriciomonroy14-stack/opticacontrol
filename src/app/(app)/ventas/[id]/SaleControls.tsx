@@ -273,7 +273,7 @@ export function LabInfoForm({ saleId, values, disabled }: { saleId: string; valu
           </button>
         </div>
       )}
-      <p className="text-xs text-[var(--oc-slate-500)]">Al registrar el envío el pedido pasa a "En fabricación"; al registrar la recepción, a "Listo para entregar".</p>
+      <p className="text-xs text-[var(--oc-slate-500)]">Al registrar el envío el pedido pasa a «En fabricación»; al registrar la recepción, a «Listo para entregar».</p>
     </form>
   );
 }

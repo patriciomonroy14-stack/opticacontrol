@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useState } from "react";
 import { Lock, Printer } from "lucide-react";
 import { Field, inputCls } from "@/components/ui";
 import { formatCLP, PAYMENT_METHOD_LABELS, EXPENSE_CATEGORY_LABELS } from "@/lib/types";

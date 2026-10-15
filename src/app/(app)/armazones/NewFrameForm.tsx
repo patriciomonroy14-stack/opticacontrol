@@ -52,16 +52,21 @@ export function NewFrameForm({ showPurchasePrice }: { showPurchasePrice: boolean
         <div className="grid sm:grid-cols-3 gap-4">
           <Field label="Código *"><input name="code" required className={inputCls} placeholder="ARM-007" /></Field>
           <Field label="Marca"><input name="brand" className={inputCls} /></Field>
+          <Field label="Modelo"><input name="model" className={inputCls} /></Field>
+        </div>
+        <div className="grid sm:grid-cols-3 gap-4">
+          <Field label="Color"><input name="color" className={inputCls} /></Field>
           <Field label="Material"><input name="material" className={inputCls} placeholder="Acetato, metal…" /></Field>
+          <Field label="Proveedor"><input name="supplier" className={inputCls} /></Field>
         </div>
         <div className={`grid gap-4 ${showPurchasePrice ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-          <Field label="Precio de venta"><input name="sale_price" type="number" min={0} className={inputCls} /></Field>
-          <Field label="Stock"><input name="stock" type="number" min={0} defaultValue={1} className={inputCls} /></Field>
           {showPurchasePrice && (
-            <Field label="Precio de compra (solo administrador)">
+            <Field label="Costo de adquisición (solo tú)">
               <input name="purchase_price" type="number" min={0} className={inputCls} />
             </Field>
           )}
+          <Field label="Precio de venta"><input name="sale_price" type="number" min={0} className={inputCls} /></Field>
+          <Field label="Stock inicial"><input name="stock" type="number" min={0} defaultValue={1} className={inputCls} /></Field>
         </div>
         <Field label="Fotografía">
           <input
