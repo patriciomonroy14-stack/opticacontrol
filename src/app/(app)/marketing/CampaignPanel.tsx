@@ -1,39 +1,51 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { sendCampaign } from "./actions";
-import { inputCls } from "@/components/ui";
-import { Send } from "lucide-react";
+import { useTransition } from "react";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { setMarketingOptOut } from "@/app/(app)/comunicaciones/actions";
+import { buildMessage } from "@/lib/whatsapp";
+import { formatDate } from "@/lib/types";
 
-type Patient = { id: string; full_name: string; phone: string | null; email: string | null; detail?: string };
-type Template = { id: string; name: string };
+type Patient = {
+  id: string;
+  full_name: string;
+  phone: string | null;
+  email: string | null;
+  detail?: string;
+  months?: number | null;
+  optOut?: boolean;
+  contactPreference?: string | null;
+  lastContact?: string | null;
+};
 
-export function CampaignPanel({ patients, templates, filterType }: { patients: Patient[]; templates: Template[]; filterType: string }) {
-  const [state, formAction, pending] = useActionState(sendCampaign, { error: "", success: "" });
-  const [selected, setSelected] = useState<string[]>(patients.map((p) => p.id));
+function OptOutToggle({ patientId, optOut }: { patientId: string; optOut: boolean }) {
+  const [pending, startTransition] = useTransition();
+  return (
+    <button
+      type="button"
+      disabled={pending}
+      onClick={() => startTransition(() => setMarketingOptOut(patientId, !optOut))}
+      className="text-xs text-[var(--oc-slate-500)] hover:text-[var(--oc-blue-700)] hover:underline disabled:opacity-50"
+    >
+      {optOut ? "Volver a permitir mensajes" : "No quiere mensajes"}
+    </button>
+  );
+}
 
-  const toggle = (id: string) => setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
-  const toggleAll = () => setSelected(selected.length === patients.length ? [] : patients.map((p) => p.id));
+export function CampaignPanel({ patients }: { patients: Patient[] }) {
+  const reachable = patients.filter((p) => !p.optOut);
+  const contacted = patients.filter((p) => p.lastContact).length;
 
   return (
-    <form action={formAction}>
-      <input type="hidden" name="filter_type" value={filterType} />
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-        <select name="template_id" required className={`${inputCls} sm:max-w-xs`}>
-          <option value="">Selecciona una plantilla…</option>
-          {templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-        </select>
-        <button
-          type="submit"
-          disabled={pending || selected.length === 0}
-          className="inline-flex items-center gap-2 rounded-full bg-[var(--oc-blue-700)] text-white text-sm font-semibold px-4 py-2.5 hover:bg-[var(--oc-blue-800)] disabled:opacity-50 shrink-0"
-        >
-          <Send className="h-4 w-4" /> {pending ? "Enviando…" : `Enviar a ${selected.length} paciente(s)`}
-        </button>
+    <div>
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 mb-4 text-sm text-[var(--oc-slate-700)]">
+        <p><b>{reachable.length}</b> pacientes contactables</p>
+        <p><b>{patients.length - reachable.length}</b> pidieron no recibir mensajes</p>
+        <p><b>{contacted}</b> ya contactados en los últimos 30 días</p>
       </div>
-
-      {state.error && <p className="text-sm text-[var(--oc-red)] bg-[var(--oc-red-bg)] rounded-lg px-3 py-2 mb-3">{state.error}</p>}
-      {state.success && <p className="text-sm text-[var(--oc-green)] bg-[var(--oc-green-bg)] rounded-lg px-3 py-2 mb-3">{state.success}</p>}
+      <p className="text-xs text-[var(--oc-slate-500)] mb-4">
+        Cada botón abre WhatsApp con el mensaje escrito; solo debes presionar Enviar. El mensaje incluye la opción de pedir no ser contactado, y el envío queda registrado en la ficha del paciente.
+      </p>
 
       {patients.length === 0 ? (
         <p className="text-sm text-[var(--oc-slate-500)] py-8 text-center">No hay pacientes en este segmento.</p>
@@ -42,27 +54,47 @@ export function CampaignPanel({ patients, templates, filterType }: { patients: P
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-xs text-[var(--oc-slate-500)] border-b border-[var(--oc-slate-200)]">
-                <th className="py-2 pr-3"><input type="checkbox" checked={selected.length === patients.length} onChange={toggleAll} className="rounded" /></th>
                 <th className="py-2 pr-3 font-medium">Paciente</th>
-                <th className="py-2 pr-3 font-medium">Contacto</th>
                 <th className="py-2 pr-3 font-medium">Detalle</th>
+                <th className="py-2 pr-3 font-medium">Último contacto</th>
+                <th className="py-2 pr-3 font-medium"></th>
               </tr>
             </thead>
             <tbody>
               {patients.map((p) => (
-                <tr key={p.id} className="border-b border-[var(--oc-slate-100)] last:border-0">
-                  <td className="py-2 pr-3">
-                    <input type="checkbox" name="patient_ids" value={p.id} checked={selected.includes(p.id)} onChange={() => toggle(p.id)} className="rounded" />
+                <tr key={p.id} className={`border-b border-[var(--oc-slate-100)] last:border-0 ${p.optOut ? "opacity-50" : ""}`}>
+                  <td className="py-2.5 pr-3">
+                    <p className="font-medium text-[var(--oc-blue-950)]">{p.full_name}</p>
+                    <p className="text-xs text-[var(--oc-slate-500)]">
+                      {p.phone || p.email || "Sin contacto"}
+                      {p.contactPreference ? ` · prefiere ${p.contactPreference}` : ""}
+                    </p>
                   </td>
-                  <td className="py-2 pr-3 font-medium text-[var(--oc-blue-950)]">{p.full_name}</td>
-                  <td className="py-2 pr-3 text-[var(--oc-slate-500)]">{p.phone || p.email || "—"}</td>
-                  <td className="py-2 pr-3 text-[var(--oc-slate-500)]">{p.detail || "—"}</td>
+                  <td className="py-2.5 pr-3 text-[var(--oc-slate-500)]">{p.detail || "—"}</td>
+                  <td className="py-2.5 pr-3 text-[var(--oc-slate-500)]">{p.lastContact ? formatDate(p.lastContact) : "—"}</td>
+                  <td className="py-2.5 pr-3">
+                    <div className="flex flex-col items-start gap-1">
+                      {p.optOut ? (
+                        <span className="text-xs font-medium text-[var(--oc-red)]">No desea mensajes</span>
+                      ) : (
+                        <WhatsAppButton
+                          compact
+                          patientId={p.id}
+                          phone={p.phone}
+                          kind="renovacion"
+                          label={p.lastContact ? "Escribir otra vez" : "Invitar por WhatsApp"}
+                          message={buildMessage("renovacion", { name: p.full_name, months: p.months ?? null })}
+                        />
+                      )}
+                      <OptOutToggle patientId={p.id} optOut={Boolean(p.optOut)} />
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       )}
-    </form>
+    </div>
   );
 }

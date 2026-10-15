@@ -17,6 +17,7 @@ import {
   Settings,
   Eye,
   Wallet,
+  HandCoins,
 } from "lucide-react";
 import { canSeeSection } from "@/lib/types";
 
@@ -27,6 +28,7 @@ const NAV = [
   { href: "/cotizaciones", label: "Cotizaciones", icon: FileText },
   { href: "/ventas", label: "Ventas", icon: ShoppingCart },
   { href: "/ordenes", label: "Órdenes", icon: PackageCheck },
+  { href: "/cobranza", label: "Cuentas por cobrar", icon: HandCoins },
   { href: "/caja", label: "Caja diaria", icon: Wallet },
   { href: "/armazones", label: "Armazones", icon: Glasses },
   { href: "/cristales", label: "Cristales", icon: Sparkles },
