@@ -14,7 +14,7 @@ export default async function ArmazonesPage({ searchParams }: { searchParams: Pr
 
   // El costo de adquisición solo se consulta para la administradora
   const columns = "id, code, frame_type, brand, model, color, material, supplier, sale_price, stock, reserved, photo_url, notes" + (admin ? ", purchase_price" : "");
-  let query = supabase.from("frames").select(columns).neq("status", "baja").order("brand");
+  let query = supabase.from("frames").select(columns).neq("status", "baja").order("code").order("frame_type");
   if (q?.trim()) {
     const term = q.trim().replace(/[,()]/g, " ");
     query = query.or(`frame_type.ilike.%${term}%,brand.ilike.%${term}%,model.ilike.%${term}%,code.ilike.%${term}%,color.ilike.%${term}%,material.ilike.%${term}%,supplier.ilike.%${term}%`);
@@ -28,7 +28,7 @@ export default async function ArmazonesPage({ searchParams }: { searchParams: Pr
 
   return (
     <div>
-      <PageHeader title="Armazones" description="Inventario: stock físico, reservados para ventas y disponibles" action={<NewFrameForm showPurchasePrice={admin} />} />
+      <PageHeader title="Armazones" description="Inventario: stock físico, reservados para ventas y disponibles" action={<NewFrameForm showPurchasePrice={admin} existing={all.map((f) => ({ code: f.code, frame_type: f.frame_type, brand: f.brand, sale_price: f.sale_price }))} />} />
 
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <form action="/armazones" className="flex-1 min-w-[14rem] max-w-md">
@@ -68,8 +68,8 @@ export default async function ArmazonesPage({ searchParams }: { searchParams: Pr
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className="font-medium text-[var(--oc-blue-950)] text-sm">{[f.brand, f.model].filter(Boolean).join(" ") || "Sin marca"}</p>
-                      <p className="text-xs text-[var(--oc-slate-500)]">{[f.code, f.frame_type, f.color].filter(Boolean).join(" · ")}</p>
+                      <p className="font-medium text-[var(--oc-blue-950)] text-sm">{f.code}{f.frame_type ? <span className="ml-1.5 rounded bg-[var(--oc-blue-100)] px-1.5 py-0.5 text-xs font-semibold text-[var(--oc-blue-800)]">{f.frame_type}</span> : null}</p>
+                      <p className="text-xs text-[var(--oc-slate-500)]">{[f.brand, f.model, f.color].filter(Boolean).join(" · ") || "Sin marca"}</p>
                     </div>
                     <Badge tone={f.available > LOW_STOCK ? "green" : f.available > 0 ? "amber" : "red"}>
                       {f.available > 0 ? `${f.available} disp.` : "Sin stock"}

@@ -59,7 +59,7 @@ export default async function PanelPage() {
     supabase.from("cash_expenses").select("amount, category, expense_date, voided_at").gte("expense_date", `${keys[0]}-01`).is("voided_at", null).limit(5000),
     supabase.from("sales").select("total, amount_paid, payment_due_date, estimated_delivery").neq("payment_status", "pagado").is("voided_at", null).limit(5000),
     supabase.from("orders").select("status, lab_promised_date, lab_received_at, sales(estimated_delivery, voided_at)").not("status", "in", "(entregado,cancelado)").limit(5000),
-    supabase.from("frames").select("id, code, brand, model, stock, reserved, purchase_price").neq("status", "baja").limit(2000),
+    supabase.from("frames").select("id, code, frame_type, brand, model, stock, reserved, purchase_price").neq("status", "baja").limit(2000),
     computeDay(supabase, today),
     supabase.from("cash_closings").select("difference, reopened_at").eq("closing_date", today).maybeSingle(),
   ]);
@@ -264,7 +264,7 @@ export default async function PanelPage() {
           <ul className="space-y-1 text-sm">
             {lowStock.slice(0, 6).map((f) => (
               <li key={f.id} className="flex justify-between">
-                <Link href={`/armazones/${f.id}`} className="text-[var(--oc-blue-800)] hover:underline truncate">{f.code} · {[f.brand, f.model].filter(Boolean).join(" ")}</Link>
+                <Link href={`/armazones/${f.id}`} className="text-[var(--oc-blue-800)] hover:underline truncate">{f.code}{f.frame_type ? ` ${f.frame_type}` : ""} · {[f.brand, f.model].filter(Boolean).join(" ")}</Link>
                 <span className={`tabular-nums font-semibold ${f.available <= 0 ? "text-[var(--oc-red)]" : "text-[var(--oc-amber)]"}`}>{f.available}</span>
               </li>
             ))}

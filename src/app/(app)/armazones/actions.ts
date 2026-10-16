@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { canSell, isAdmin } from "@/lib/types";
 import { getSession } from "@/lib/session";
 import { adjustFrameStock } from "@/lib/inventory";
+import { FRAME_TYPES } from "./NewFrameForm";
 
 type State = { error: string; ok?: boolean };
 
@@ -37,7 +38,7 @@ export async function createFrame(_prevState: State, formData: FormData): Promis
 
   const payload = {
     code: String(formData.get("code") || "").trim(),
-    frame_type: str("frame_type"),
+    frame_type: (str("frame_type") ?? "").toUpperCase() || null,
     brand: str("brand"),
     color: str("color"),
     sale_price: num("sale_price"),
@@ -47,10 +48,11 @@ export async function createFrame(_prevState: State, formData: FormData): Promis
   };
 
   if (!payload.code) return { error: "El código es obligatorio." };
+  if (!payload.frame_type || !FRAME_TYPES.includes(payload.frame_type)) return { error: "Selecciona el tipo (C1 a C8)." };
   if (payload.sale_price < 0) return { error: "El precio no puede ser negativo." };
 
   const { data, error } = await supabase.from("frames").insert(payload).select("id").single();
-  if (error) return { error: error.message.includes("duplicate") ? "Ya existe un armazón con ese código." : "No se pudo guardar el armazón." };
+  if (error) return { error: error.message.includes("duplicate") ? `Ya existe el código ${payload.code} en ${payload.frame_type}. Elige otro tipo o suma stock en su ficha.` : "No se pudo guardar el armazón." };
 
   if (initialStock > 0) {
     await supabase.from("inventory_movements").insert({ frame_id: data.id, kind: "ingreso", stock_change: initialStock, reason: "Stock inicial al crear el armazón" });
@@ -78,7 +80,7 @@ export async function updateFrame(frameId: string, _prevState: State, formData: 
   if (!before) return { error: "No se encontró el armazón." };
 
   const values: Record<string, unknown> = {
-    frame_type: str("frame_type"),
+    frame_type: (str("frame_type") ?? "").toUpperCase() || null,
     brand: str("brand"),
     model: str("model"),
     color: str("color"),
@@ -92,7 +94,7 @@ export async function updateFrame(frameId: string, _prevState: State, formData: 
   }
 
   const { error } = await supabase.from("frames").update(values).eq("id", frameId);
-  if (error) return { error: "No se pudieron guardar los cambios." };
+  if (error) return { error: error.message.includes("duplicate") ? "Ya existe otro armazón con ese código y ese tipo." : "No se pudieron guardar los cambios." };
 
   const photoWarning = await uploadPhoto(supabase, frameId, formData.get("photo") as File | null);
   await logActivity({ action: "editar_armazon", entity_type: "frame", entity_id: frameId, details: { antes: before, despues: values } });

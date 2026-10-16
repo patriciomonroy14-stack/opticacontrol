@@ -5,7 +5,7 @@ import { createSale } from "../actions";
 import { Field, inputCls } from "@/components/ui";
 import { formatCLP, todayCL, PAYMENT_METHOD_LABELS, ORDER_STATUS_LABELS, ORDER_STATUS_SEQUENCE } from "@/lib/types";
 
-type Frame = { id: string; code: string; brand: string | null; model: string | null; sale_price: number | null; stock: number };
+type Frame = { id: string; code: string; frame_type?: string | null; color?: string | null; brand: string | null; model: string | null; sale_price: number | null; stock: number };
 type Patient = { id: string; full_name: string };
 type LensType = { id: string; name: string };
 type LensMaterial = { id: string; name: string };
@@ -140,7 +140,7 @@ export function NewSaleForm({
         <Field label="Armazón">
           <select name="frame_id" value={frameId} onChange={(e) => setFrameId(e.target.value)} className={inputCls}>
             <option value="">Sin armazón…</option>
-            {frames.map((f) => <option key={f.id} value={f.id}>{f.code} · {f.brand} {f.model} · {formatCLP(f.sale_price)} ({f.stock} disponible{f.stock === 1 ? "" : "s"})</option>)}
+            {frames.map((f) => <option key={f.id} value={f.id}>{f.code}{f.frame_type ? ` ${f.frame_type}` : ""} · {[f.brand, f.color].filter(Boolean).join(" ")} · {formatCLP(f.sale_price)} ({f.stock} disponible{f.stock === 1 ? "" : "s"})</option>)}
           </select>
           <input type="hidden" name="frame_price" value={framePrice} />
         </Field>

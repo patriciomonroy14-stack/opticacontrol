@@ -43,7 +43,7 @@ export default async function VentaDetallePage({ params }: { params: Promise<{ i
     supabase
       .from("sales")
       .select(
-        "id, work_order_number, sale_date, total, subtotal, discount, discount_approved_by, purchase_type, lens_description, estimated_delivery, payment_due_date, notes, accessories, client_owns_frame, frame_cost, lens_cost, other_costs, voided_at, void_reason, patients(id, full_name, phone), frames(code, brand, model, color), lens_types(name), lens_materials(name)",
+        "id, work_order_number, sale_date, total, subtotal, discount, discount_approved_by, purchase_type, lens_description, estimated_delivery, payment_due_date, notes, accessories, client_owns_frame, frame_cost, lens_cost, other_costs, voided_at, void_reason, patients(id, full_name, phone), frames(code, frame_type, brand, model, color), lens_types(name), lens_materials(name)",
       )
       .eq("id", id)
       .maybeSingle(),
@@ -340,7 +340,7 @@ export default async function VentaDetallePage({ params }: { params: Promise<{ i
               <div>
                 <p className="text-xs text-[var(--oc-slate-500)]">Armazón</p>
                 <p className="text-[var(--oc-blue-950)]">
-                  {s.client_owns_frame ? "Propio del paciente" : [s.frames?.code, s.frames?.brand, s.frames?.model, s.frames?.color].filter(Boolean).join(" · ")}
+                  {s.client_owns_frame ? "Propio del paciente" : [[s.frames?.code, s.frames?.frame_type].filter(Boolean).join(" "), s.frames?.brand, s.frames?.model, s.frames?.color].filter(Boolean).join(" · ")}
                 </p>
               </div>
             )}

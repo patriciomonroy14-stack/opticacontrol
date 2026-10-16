@@ -33,10 +33,10 @@ export function EditFrameForm({ frameId, values, admin }: { frameId: string; val
     <form action={formAction} onChange={() => setSaved(false)} className="space-y-3">
       <div className="grid sm:grid-cols-3 gap-3">
         <Field label="Tipo">
-          <input name="frame_type" list="frame-types-edit" defaultValue={values.frame_type ?? ""} autoComplete="off" className={inputCls} />
-          <datalist id="frame-types-edit">
-            {FRAME_TYPES.map((t) => <option key={t} value={t} />)}
-          </datalist>
+          <select name="frame_type" defaultValue={values.frame_type ?? ""} className={inputCls}>
+            <option value="">Sin tipo</option>
+            {FRAME_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+          </select>
         </Field>
         <Field label="Marca"><input name="brand" defaultValue={values.brand ?? ""} className={inputCls} /></Field>
         <Field label="Modelo"><input name="model" defaultValue={values.model ?? ""} className={inputCls} /></Field>

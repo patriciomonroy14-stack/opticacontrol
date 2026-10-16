@@ -6,7 +6,7 @@ import { Field, inputCls } from "@/components/ui";
 import { formatCLP } from "@/lib/types";
 
 type Patient = { id: string; full_name: string };
-type Frame = { id: string; code: string; brand: string | null; model: string | null; sale_price: number | null; stock: number };
+type Frame = { id: string; code: string; frame_type?: string | null; color?: string | null; brand: string | null; model: string | null; sale_price: number | null; stock: number };
 type LensType = { id: string; name: string };
 type LensMaterial = { id: string; name: string };
 type LensBasePrice = { lens_type_id: string; material_id: string; price: number };
@@ -200,7 +200,7 @@ export function NewQuoteForm({
           <Field label="Armazón (opcional)">
             <select name="frame_id" value={frameId} onChange={(e) => setFrameId(e.target.value)} className={inputCls}>
               <option value="">Sin armazón…</option>
-              {frames.map((f) => <option key={f.id} value={f.id}>{f.code} · {f.brand} {f.model} · {formatCLP(f.sale_price)}</option>)}
+              {frames.map((f) => <option key={f.id} value={f.id}>{f.code}{f.frame_type ? ` ${f.frame_type}` : ""} · {[f.brand, f.color].filter(Boolean).join(" ")} · {formatCLP(f.sale_price)}</option>)}
             </select>
             <input type="hidden" name="frame_price" value={framePrice} />
           </Field>
