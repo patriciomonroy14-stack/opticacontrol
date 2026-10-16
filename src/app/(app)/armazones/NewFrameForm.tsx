@@ -5,23 +5,7 @@ import { createFrame } from "./actions";
 import { Field, inputCls } from "@/components/ui";
 import { Plus, X } from "lucide-react";
 
-/** Achica una foto a un máximo de 1600 px y la convierte a JPEG liviano. */
-async function shrinkImage(file: File): Promise<File> {
-  if (!file.type.startsWith("image/") || file.size < 600_000) return file;
-  try {
-    const bitmap = await createImageBitmap(file);
-    const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(bitmap.width * scale);
-    canvas.height = Math.round(bitmap.height * scale);
-    canvas.getContext("2d")?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.82));
-    if (!blob) return file;
-    return new File([blob], file.name.replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
-  } catch {
-    return file;
-  }
-}
+export const FRAME_TYPES = ["Óptico", "Sol", "Niño", "Deportivo", "Lectura"];
 
 export function NewFrameForm({ showPurchasePrice }: { showPurchasePrice: boolean }) {
   const [open, setOpen] = useState(false);
@@ -49,45 +33,28 @@ export function NewFrameForm({ showPurchasePrice }: { showPurchasePrice: boolean
         <button onClick={() => setOpen(false)} className="h-8 w-8 rounded-lg hover:bg-[var(--oc-slate-100)] flex items-center justify-center"><X className="h-4 w-4" /></button>
       </div>
       <form action={formAction} className="space-y-4">
-        <div className="grid sm:grid-cols-3 gap-4">
-          <Field label="Código *"><input name="code" required className={inputCls} placeholder="ARM-007" /></Field>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <Field label="Código *"><input name="code" required autoFocus className={inputCls} placeholder="ARM-007" /></Field>
+          <Field label="Tipo">
+            <input name="frame_type" list="frame-types" autoComplete="off" className={inputCls} placeholder="Óptico, sol, niño…" />
+            <datalist id="frame-types">
+              {FRAME_TYPES.map((t) => <option key={t} value={t} />)}
+            </datalist>
+          </Field>
+        </div>
+        <div className="grid sm:grid-cols-2 gap-4">
           <Field label="Marca"><input name="brand" className={inputCls} /></Field>
-          <Field label="Modelo"><input name="model" className={inputCls} /></Field>
-        </div>
-        <div className="grid sm:grid-cols-3 gap-4">
           <Field label="Color"><input name="color" className={inputCls} /></Field>
-          <Field label="Material"><input name="material" className={inputCls} placeholder="Acetato, metal…" /></Field>
-          <Field label="Proveedor"><input name="supplier" className={inputCls} /></Field>
         </div>
-        <div className={`grid gap-4 ${showPurchasePrice ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-          {showPurchasePrice && (
-            <Field label="Costo de adquisición (solo tú)">
-              <input name="purchase_price" type="number" min={0} className={inputCls} />
-            </Field>
-          )}
+        <div className="grid sm:grid-cols-2 gap-4">
           <Field label="Precio de venta"><input name="sale_price" type="number" min={0} className={inputCls} /></Field>
-          <Field label="Stock inicial"><input name="stock" type="number" min={0} defaultValue={1} className={inputCls} /></Field>
+          <Field label="Stock"><input name="stock" type="number" min={0} defaultValue={1} className={inputCls} /></Field>
         </div>
-        <Field label="Fotografía">
-          <input
-            name="photo"
-            type="file"
-            accept="image/*"
-            className={`${inputCls} py-1.5`}
-            onChange={async (e) => {
-              const input = e.currentTarget;
-              const file = input.files?.[0];
-              if (!file) return;
-              const small = await shrinkImage(file);
-              if (small !== file) {
-                const dt = new DataTransfer();
-                dt.items.add(small);
-                input.files = dt.files;
-              }
-            }}
-          />
-        </Field>
-        <Field label="Observaciones (opcional)"><textarea name="notes" rows={2} className={inputCls} /></Field>
+        {showPurchasePrice && (
+          <Field label="Costo (opcional, solo lo ves tú)" hint="Sirve para calcular la ganancia de cada venta">
+            <input name="purchase_price" type="number" min={0} className={inputCls} />
+          </Field>
+        )}
 
         {state.error && <p className="text-sm text-[var(--oc-red)] bg-[var(--oc-red-bg)] rounded-lg px-3 py-2">{state.error}</p>}
 

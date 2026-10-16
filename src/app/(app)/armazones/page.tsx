@@ -13,11 +13,11 @@ export default async function ArmazonesPage({ searchParams }: { searchParams: Pr
   const admin = isAdmin(role);
 
   // El costo de adquisición solo se consulta para la administradora
-  const columns = "id, code, brand, model, color, material, supplier, sale_price, stock, reserved, photo_url, notes" + (admin ? ", purchase_price" : "");
+  const columns = "id, code, frame_type, brand, model, color, material, supplier, sale_price, stock, reserved, photo_url, notes" + (admin ? ", purchase_price" : "");
   let query = supabase.from("frames").select(columns).neq("status", "baja").order("brand");
   if (q?.trim()) {
     const term = q.trim().replace(/[,()]/g, " ");
-    query = query.or(`brand.ilike.%${term}%,model.ilike.%${term}%,code.ilike.%${term}%,color.ilike.%${term}%,material.ilike.%${term}%,supplier.ilike.%${term}%`);
+    query = query.or(`frame_type.ilike.%${term}%,brand.ilike.%${term}%,model.ilike.%${term}%,code.ilike.%${term}%,color.ilike.%${term}%,material.ilike.%${term}%,supplier.ilike.%${term}%`);
   }
   const { data } = await query.limit(300);
   const all = ((data as any[]) || []).map((f) => ({ ...f, available: Number(f.stock) - Number(f.reserved || 0) }));
@@ -34,7 +34,7 @@ export default async function ArmazonesPage({ searchParams }: { searchParams: Pr
         <form action="/armazones" className="flex-1 min-w-[14rem] max-w-md">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--oc-slate-500)]" />
-            <input name="q" defaultValue={q} placeholder="Código, marca, modelo, color, proveedor…" className={`${inputCls} pl-9 rounded-full`} />
+            <input name="q" defaultValue={q} placeholder="Código, tipo, marca, color…" className={`${inputCls} pl-9 rounded-full`} />
           </div>
         </form>
         <Link
@@ -69,7 +69,7 @@ export default async function ArmazonesPage({ searchParams }: { searchParams: Pr
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-medium text-[var(--oc-blue-950)] text-sm">{[f.brand, f.model].filter(Boolean).join(" ") || "Sin marca"}</p>
-                      <p className="text-xs text-[var(--oc-slate-500)]">{[f.code, f.color, f.material].filter(Boolean).join(" · ")}</p>
+                      <p className="text-xs text-[var(--oc-slate-500)]">{[f.code, f.frame_type, f.color].filter(Boolean).join(" · ")}</p>
                     </div>
                     <Badge tone={f.available > LOW_STOCK ? "green" : f.available > 0 ? "amber" : "red"}>
                       {f.available > 0 ? `${f.available} disp.` : "Sin stock"}

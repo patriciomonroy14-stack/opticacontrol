@@ -37,14 +37,11 @@ export async function createFrame(_prevState: State, formData: FormData): Promis
 
   const payload = {
     code: String(formData.get("code") || "").trim(),
+    frame_type: str("frame_type"),
     brand: str("brand"),
-    model: str("model"),
     color: str("color"),
-    material: str("material"),
-    supplier: str("supplier"),
     sale_price: num("sale_price"),
     stock: initialStock,
-    notes: str("notes"),
     // El costo de adquisición solo lo registra la administradora
     ...(admin ? { purchase_price: num("purchase_price") } : {}),
   };
@@ -75,12 +72,13 @@ export async function updateFrame(frameId: string, _prevState: State, formData: 
 
   const { data: before } = await supabase
     .from("frames")
-    .select(admin ? "code, brand, model, color, material, supplier, notes, sale_price, purchase_price" : "code, brand, model, color, material, supplier, notes, sale_price")
+    .select(admin ? "code, frame_type, brand, model, color, material, supplier, notes, sale_price, purchase_price" : "code, frame_type, brand, model, color, material, supplier, notes, sale_price")
     .eq("id", frameId)
     .maybeSingle();
   if (!before) return { error: "No se encontró el armazón." };
 
   const values: Record<string, unknown> = {
+    frame_type: str("frame_type"),
     brand: str("brand"),
     model: str("model"),
     color: str("color"),

@@ -53,7 +53,7 @@ En la base: `cash_closings`, `cash_expenses` y `activity_log` solo los lee la ad
    - Se guarda en `settings` (key `business_hours`: `lunes_viernes`, `sabado`, `domingo`, `slot_minutes`) y se edita en Configuración.
 7. **Fechas en hora de Chile:** antes la app cambiaba de día a las 21:00 por usar UTC. Ayudantes: `todayCL()`, `chileDay()`, `formatTimeCL()`.
 8. **Armazones:**
-   - Formulario con código, marca, material, precio de venta, stock, foto (se comprime en el navegador; límite de subida de 4 MB en `next.config.ts`) y observaciones.
+   - Formulario de nuevo armazón (16-oct): código, tipo (`frames.frame_type`: óptico, sol, niño…), marca, color, precio de venta y stock; costo opcional solo para administradora. Modelo, material, proveedor, foto y observaciones se editan en la ficha `/armazones/[id]`.
    - El precio de compra solo se consulta y muestra para el administrador.
 9. **Ventas, abonos y caja diaria:**
    - **Nueva venta:** paciente por nombre, N° de orden de trabajo (automático `OT-####` con la secuencia `work_order_seq`), fecha del pedido, lente y cristales, total, abono inicial, saldo automático, medio de pago, entrega estimada y estado.

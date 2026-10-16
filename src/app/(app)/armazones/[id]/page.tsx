@@ -20,7 +20,7 @@ export default async function FrameDetailPage({ params }: { params: Promise<{ id
   const { supabase, role } = await getSession();
   const admin = isAdmin(role);
 
-  const columns = "id, code, brand, model, color, material, supplier, sale_price, stock, reserved, photo_url, notes, created_at" + (admin ? ", purchase_price" : "");
+  const columns = "id, code, frame_type, brand, model, color, material, supplier, sale_price, stock, reserved, photo_url, notes, created_at" + (admin ? ", purchase_price" : "");
   const [{ data: frame }, { data: movements }] = await Promise.all([
     supabase.from("frames").select(columns).eq("id", id).maybeSingle(),
     supabase
@@ -43,7 +43,7 @@ export default async function FrameDetailPage({ params }: { params: Promise<{ id
       <Link href="/armazones" className="inline-flex items-center gap-1 text-sm text-[var(--oc-slate-500)] hover:text-[var(--oc-blue-700)] mb-3">
         <ArrowLeft className="h-4 w-4" /> Armazones
       </Link>
-      <PageHeader title={`${f.code} · ${[f.brand, f.model].filter(Boolean).join(" ") || "Sin marca"}`} description={[f.color, f.material, f.supplier].filter(Boolean).join(" · ")} />
+      <PageHeader title={`${f.code} · ${[f.brand, f.model].filter(Boolean).join(" ") || "Sin marca"}`} description={[f.frame_type, f.color, f.material, f.supplier].filter(Boolean).join(" · ")} />
 
       <div className="grid sm:grid-cols-4 gap-4 mb-6">
         <Card className="p-5">
@@ -132,6 +132,7 @@ export default async function FrameDetailPage({ params }: { params: Promise<{ id
               frameId={f.id}
               admin={admin}
               values={{
+                frame_type: f.frame_type,
                 brand: f.brand,
                 model: f.model,
                 color: f.color,

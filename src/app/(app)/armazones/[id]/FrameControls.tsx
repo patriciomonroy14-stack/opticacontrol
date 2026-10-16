@@ -3,10 +3,12 @@
 import { useActionState, useState } from "react";
 import { Field, inputCls } from "@/components/ui";
 import { adjustStock, updateFrame } from "../actions";
+import { FRAME_TYPES } from "../NewFrameForm";
 
 type State = { error: string; ok?: boolean };
 
 type FrameValues = {
+  frame_type: string | null;
   brand: string | null;
   model: string | null;
   color: string | null;
@@ -30,11 +32,17 @@ export function EditFrameForm({ frameId, values, admin }: { frameId: string; val
   return (
     <form action={formAction} onChange={() => setSaved(false)} className="space-y-3">
       <div className="grid sm:grid-cols-3 gap-3">
+        <Field label="Tipo">
+          <input name="frame_type" list="frame-types-edit" defaultValue={values.frame_type ?? ""} autoComplete="off" className={inputCls} />
+          <datalist id="frame-types-edit">
+            {FRAME_TYPES.map((t) => <option key={t} value={t} />)}
+          </datalist>
+        </Field>
         <Field label="Marca"><input name="brand" defaultValue={values.brand ?? ""} className={inputCls} /></Field>
         <Field label="Modelo"><input name="model" defaultValue={values.model ?? ""} className={inputCls} /></Field>
-        <Field label="Color"><input name="color" defaultValue={values.color ?? ""} className={inputCls} /></Field>
       </div>
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div className="grid sm:grid-cols-3 gap-3">
+        <Field label="Color"><input name="color" defaultValue={values.color ?? ""} className={inputCls} /></Field>
         <Field label="Material"><input name="material" defaultValue={values.material ?? ""} className={inputCls} /></Field>
         <Field label="Proveedor"><input name="supplier" defaultValue={values.supplier ?? ""} className={inputCls} /></Field>
       </div>
